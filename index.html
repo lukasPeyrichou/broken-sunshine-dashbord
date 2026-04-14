@@ -1,0 +1,1928 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Broken Sunshine — Dev Dashboard v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323:wght@400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy:#0a0e1a; --navy2:#0f1628; --navy3:#161f3a;
+  --gold:#f0a500; --gold2:#ffd166; --gold-dim:#8a5f00;
+  --amber:#e07b00; --shadow:#2d0057; --shadow2:#4a007a; --shadow3:#7c00cc;
+  --red:#c0392b; --green:#27ae60; --green2:#52c788;
+  --steel:#7f8c8d; --steel2:#b2c2c3; --orange:#e67e22;
+  --white:#f0e6cc; --dim:#8a8070; --border:#f0a500;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--navy);color:var(--white);font-family:'VT323',monospace;font-size:20px;line-height:1.6;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(240,165,0,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,165,0,0.03) 1px,transparent 1px);background-size:8px 8px;pointer-events:none;z-index:0}
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;background:rgba(10,14,26,0.97);border-bottom:4px solid var(--gold);padding:8px 0}
+.nav-inner{max-width:1400px;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+nav a{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);text-decoration:none;padding:5px 8px;border:2px solid transparent;transition:all .1s}
+nav a:hover{color:var(--gold);border-color:var(--gold);background:rgba(240,165,0,0.08)}
+.torch{display:inline-block;width:8px;height:8px;background:var(--gold);box-shadow:0 0 8px 3px var(--gold),0 0 16px 6px rgba(240,165,0,.4);animation:torchFlicker .15s ease-in-out infinite alternate}
+@keyframes torchFlicker{0%{opacity:1;transform:scale(1)}50%{opacity:.85;transform:scale(.95)translateX(1px)}100%{opacity:1;transform:scale(1.05)}}
+/* Edit mode toggle */
+#edit-toggle{font-family:'Press Start 2P',monospace;font-size:6px;padding:5px 10px;background:transparent;border:2px solid var(--steel);color:var(--steel);cursor:pointer;transition:all .1s}
+#edit-toggle:hover{border-color:var(--gold);color:var(--gold)}
+.edit-mode #edit-toggle{border-color:var(--red);color:var(--red);animation:editPulse 2s ease-in-out infinite}
+@keyframes editPulse{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.4)}50%{box-shadow:0 0 0 4px rgba(192,57,43,0)}}
+#export-btn,#import-btn,#reset-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:5px 8px;background:transparent;border:2px solid var(--navy3);color:var(--dim);cursor:pointer;transition:all .1s;display:none}
+.edit-mode #export-btn,.edit-mode #import-btn,.edit-mode #reset-btn{display:inline-block}
+#save-file-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:5px 10px;background:rgba(240,165,0,.12);border:2px solid var(--gold);color:var(--gold);cursor:pointer;transition:all .1s}
+#save-file-btn:hover{background:rgba(240,165,0,.22);box-shadow:0 0 10px rgba(240,165,0,.3)}
+#save-file-btn:active{transform:scale(.96)}
+#export-btn:hover{border-color:var(--green);color:var(--green)}
+#import-btn:hover{border-color:var(--gold);color:var(--gold)}
+#reset-btn:hover{border-color:var(--red);color:var(--red)}
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);z-index:999;background:var(--navy2);border:2px solid var(--green);font-family:'Press Start 2P',monospace;font-size:7px;color:var(--green2);padding:10px 20px;transition:transform .3s;pointer-events:none}
+#toast.show{transform:translateX(-50%) translateY(0)}
+/* FAB */
+#add-section-fab{position:fixed;bottom:32px;right:32px;z-index:300;width:48px;height:48px;background:var(--navy2);border:3px solid var(--gold);color:var(--gold);font-size:28px;font-family:'Press Start 2P',monospace;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all .15s}
+#add-section-fab:hover{background:var(--navy3);box-shadow:0 0 20px rgba(240,165,0,.3);transform:scale(1.1)}
+.edit-mode #add-section-fab{display:flex}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,.8);align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--navy2);border:3px solid var(--gold);padding:32px;min-width:320px;max-width:500px;width:90%}
+.modal-title{font-family:'Press Start 2P',monospace;font-size:10px;color:var(--gold);margin-bottom:24px}
+.modal-field{margin-bottom:16px}
+.modal-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--dim);display:block;margin-bottom:6px}
+.modal-input{width:100%;background:var(--navy);border:2px solid var(--gold-dim);color:var(--white);font-family:'VT323',monospace;font-size:20px;padding:8px;outline:none}
+.modal-input:focus{border-color:var(--gold)}
+.modal-select{width:100%;background:var(--navy);border:2px solid var(--gold-dim);color:var(--white);font-family:'VT323',monospace;font-size:20px;padding:8px;outline:none;cursor:pointer}
+.modal-btns{display:flex;gap:12px;margin-top:24px}
+.btn-confirm{flex:1;font-family:'Press Start 2P',monospace;font-size:7px;padding:10px;background:var(--gold);color:var(--navy);border:none;cursor:pointer;transition:all .1s}
+.btn-confirm:hover{background:var(--gold2)}
+.btn-cancel{flex:1;font-family:'Press Start 2P',monospace;font-size:7px;padding:10px;background:transparent;color:var(--dim);border:2px solid var(--navy3);cursor:pointer;transition:all .1s}
+.btn-cancel:hover{border-color:var(--red);color:var(--red)}
+/* SECTIONS */
+.page-section{max-width:1400px;margin:0 auto;padding:60px 24px;position:relative;z-index:1}
+.section-wrapper{position:relative}
+.section-title{font-family:'Press Start 2P',monospace;font-size:clamp(10px,2vw,15px);color:var(--gold);display:flex;align-items:center;gap:16px;margin-bottom:32px;text-shadow:0 0 10px rgba(240,165,0,.4)}
+.section-title::before,.section-title::after{content:'';flex:1;height:2px;background:linear-gradient(90deg,transparent,var(--gold-dim))}
+.section-title::after{background:linear-gradient(90deg,var(--gold-dim),transparent)}
+/* EDIT CONTROLS per section */
+.section-controls{display:none;position:absolute;top:8px;right:8px;gap:6px;z-index:10}
+.edit-mode .section-controls{display:flex}
+.section-controls button{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 6px;background:var(--navy2);border:1px solid var(--navy3);color:var(--dim);cursor:pointer;transition:all .1s}
+.section-controls button:hover{border-color:var(--gold);color:var(--gold)}
+.section-controls .del-section-btn:hover{border-color:var(--red);color:var(--red)}
+/* EDIT MODE text */
+.edit-mode [contenteditable]{outline:1px dashed rgba(240,165,0,.4);cursor:text;min-width:8px;min-height:1em}
+.edit-mode [contenteditable]:hover{background:rgba(240,165,0,.04);outline:1px dashed var(--gold-dim)}
+.edit-mode [contenteditable]:focus{background:rgba(240,165,0,.07);outline:2px solid var(--gold);outline-offset:2px}
+/* EDIT CTRL buttons (+/-) */
+.edit-ctrl{display:none}
+.edit-mode .edit-ctrl{display:inline-flex}
+.add-item-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;background:transparent;border:1px dashed var(--green);color:var(--green);cursor:pointer;transition:all .1s;margin-top:8px}
+.add-item-btn:hover{background:rgba(39,174,96,.08)}
+.del-item-btn{font-family:'Press Start 2P',monospace;font-size:8px;padding:2px 5px;background:transparent;border:none;color:var(--red);cursor:pointer;opacity:.5;transition:opacity .1s;flex-shrink:0}
+.del-item-btn:hover{opacity:1}
+/* HERO */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:80px 20px 40px}
+#hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(1px 1px at 10% 15%,rgba(255,255,255,.6) 0%,transparent 100%),radial-gradient(1px 1px at 25% 40%,rgba(255,255,255,.4) 0%,transparent 100%),radial-gradient(1px 1px at 40% 10%,rgba(255,255,255,.7) 0%,transparent 100%),radial-gradient(1px 1px at 70% 20%,rgba(255,255,255,.6) 0%,transparent 100%),radial-gradient(1px 1px at 90% 10%,rgba(255,255,255,.7) 0%,transparent 100%),radial-gradient(2px 2px at 5% 50%,rgba(240,165,0,.3) 0%,transparent 100%);pointer-events:none}
+.hero-sun{position:absolute;top:80px;right:15%;width:64px;height:64px;animation:sunPulse 4s ease-in-out infinite}
+.hero-sun-core{position:absolute;inset:12px;background:var(--gold);box-shadow:0 0 0 4px var(--amber),0 0 20px 8px rgba(240,165,0,.4),0 0 40px 16px rgba(240,165,0,.2)}
+.hero-sun::before{content:'';position:absolute;top:0;left:28px;width:8px;height:64px;background:var(--gold);opacity:.5}
+.hero-sun::after{content:'';position:absolute;top:28px;left:0;width:64px;height:8px;background:var(--gold);opacity:.5}
+@keyframes sunPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.92)}}
+.hero-title{font-family:'Press Start 2P',monospace;font-size:clamp(24px,5vw,52px);color:var(--gold);text-shadow:4px 4px 0 var(--amber),-2px -2px 0 #8a5f00,0 0 30px rgba(240,165,0,.6);letter-spacing:4px;text-align:center;animation:titleGlow 3s ease-in-out infinite;position:relative;z-index:1;line-height:1.4}
+@keyframes titleGlow{0%,100%{text-shadow:4px 4px 0 var(--amber),-2px -2px 0 #8a5f00,0 0 30px rgba(240,165,0,.6)}50%{text-shadow:4px 4px 0 var(--amber),-2px -2px 0 #8a5f00,0 0 60px rgba(240,165,0,.9)}}
+.hero-subtitle{font-size:28px;color:var(--gold2);text-align:center;margin-top:8px;letter-spacing:2px;opacity:.85;position:relative;z-index:1}
+.hero-divider{width:min(500px,90%);height:4px;margin:24px auto;background:linear-gradient(90deg,transparent,var(--gold),var(--gold2),var(--gold),transparent);position:relative}
+.hero-divider::before,.hero-divider::after{content:'◆';position:absolute;top:-10px;color:var(--gold);font-size:20px}
+.hero-divider::before{left:40%}
+.hero-divider::after{right:40%}
+.hero-meta{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;margin-bottom:16px}
+.hero-meta-item{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--dim);text-align:center}
+.hero-meta-item span{display:block;color:var(--gold);font-size:9px;margin-bottom:4px}
+.progress-wrap{width:min(500px,90%);position:relative;z-index:1}
+.progress-label{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--dim);margin-bottom:8px;display:flex;justify-content:space-between}
+.progress-label em{color:var(--gold);font-style:normal}
+.progress-outer{height:20px;background:var(--navy3);border:3px solid var(--gold-dim);overflow:hidden}
+.progress-inner{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold),var(--gold2));transition:width .4s;position:relative}
+.progress-inner::after{content:'';position:absolute;top:0;bottom:0;right:0;width:4px;background:#fff;opacity:.6;animation:progressPulse 1s ease-in-out infinite}
+@keyframes progressPulse{0%,100%{opacity:.6}50%{opacity:.2}}
+.scroll-hint{position:absolute;bottom:24px;font-family:'Press Start 2P',monospace;font-size:7px;color:var(--dim);text-align:center;animation:bounce 2s ease-in-out infinite;z-index:1}
+.scroll-hint::after{content:' ▼';color:var(--gold)}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+/* SYNOPSIS */
+#synopsis{background:linear-gradient(135deg,rgba(15,22,40,.95),rgba(22,31,58,.95));border-top:4px solid var(--gold-dim);border-bottom:4px solid var(--gold-dim)}
+.synopsis-box{max-width:800px;margin:0 auto;padding:32px 40px;background:var(--navy);border:3px solid var(--gold-dim);position:relative}
+.synopsis-box::before{content:'❝';position:absolute;top:-20px;left:20px;font-size:48px;color:var(--gold);opacity:.4}
+.synopsis-text{font-size:24px;line-height:1.7;color:var(--white);font-style:italic}
+.synopsis-twist{margin-top:20px;padding-top:16px;border-top:2px solid var(--shadow3);font-size:21px;color:var(--shadow3);font-style:italic}
+/* TECH */
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
+.tech-card{background:var(--navy2);border:3px solid var(--gold-dim);padding:18px;transition:all .15s}
+.tech-card:hover{border-color:var(--gold);background:var(--navy3);transform:translateY(-3px)}
+.tech-icon{font-size:28px;display:block;margin-bottom:8px}
+.tech-label{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--gold);display:block;margin-bottom:4px}
+.tech-value{font-size:20px;color:var(--white)}
+/* PERSONNAGES */
+.char-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.char-card{background:var(--navy2);border:3px solid var(--navy3);overflow:hidden;transition:border-color .15s}
+.char-header{padding:16px 20px 12px;display:flex;align-items:center;gap:14px;cursor:pointer}
+.char-avatar{width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;border:2px solid currentColor;opacity:.8}
+.char-name{font-family:'Press Start 2P',monospace;font-size:9px;line-height:1.5}
+.char-role{font-size:17px;color:var(--dim);margin-top:2px}
+.char-expand-btn{margin-left:auto;background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:14px;transition:transform .2s}
+.char-expand-btn.open{transform:rotate(180deg)}
+.char-body{padding:0 20px 16px}
+.char-quote{padding:8px 12px;border-left:3px solid currentColor;font-size:17px;font-style:italic;opacity:.7;margin-bottom:8px}
+.char-tags{display:flex;gap:6px;flex-wrap:wrap}
+.char-tag{font-family:'Press Start 2P',monospace;font-size:5px;padding:3px 6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--dim)}
+/* Full char sheet */
+.char-full{display:none;padding:0 20px 20px;border-top:2px solid rgba(255,255,255,.06)}
+.char-full.open{display:block}
+.char-section-title{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--dim);margin:16px 0 10px;letter-spacing:1px}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stat-row{display:flex;align-items:center;gap:8px}
+.stat-lbl{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);min-width:36px}
+.stat-bar{flex:1;height:10px;background:var(--navy3);border:1px solid rgba(255,255,255,.08)}
+.stat-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width .4s}
+.stat-val{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--gold);min-width:24px;text-align:right}
+.sorts-table{width:100%;border-collapse:collapse;font-size:17px;margin-top:4px}
+.sorts-table th{font-family:'Press Start 2P',monospace;font-size:5px;color:var(--dim);text-align:left;padding:4px 6px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sorts-table td{padding:5px 6px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+.sorts-table tr:last-child td{border-bottom:none}
+.sort-cost-cell{color:var(--gold);font-family:'Press Start 2P',monospace;font-size:6px;white-space:nowrap}
+.sort-ombre-cell{color:var(--shadow3);font-family:'Press Start 2P',monospace;font-size:6px;white-space:nowrap}
+.arc-item{display:flex;align-items:flex-start;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:18px}
+.arc-num{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--gold);min-width:20px;margin-top:3px}
+.secret-item{background:rgba(0,0,0,.2);border:1px solid rgba(124,0,204,.3);padding:8px 12px;margin-bottom:6px;font-size:17px;color:var(--dim);line-height:1.4}
+.corrupt-badge{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;margin-top:12px;display:inline-block}
+.corrupt-yes{background:rgba(124,0,204,.2);border:1px solid var(--shadow3);color:var(--shadow3)}
+.corrupt-no{background:rgba(39,174,96,.1);border:1px solid var(--green);color:var(--green2)}
+/* Char color themes */
+.char-kairo{border-color:var(--gold-dim)}
+.char-kairo:hover{border-color:var(--gold);box-shadow:0 0 20px rgba(240,165,0,.15)}
+.char-kairo .char-header{background:linear-gradient(135deg,rgba(240,165,0,.1),rgba(224,123,0,.05));border-bottom:3px solid var(--gold)}
+.char-kairo .char-avatar{color:var(--gold);background:rgba(240,165,0,.08)}
+.char-kairo .char-name{color:var(--gold)}
+.char-kairo .char-quote{border-color:var(--gold)}
+.char-lyra{border-color:#1a5c35}
+.char-lyra:hover{border-color:var(--green);box-shadow:0 0 20px rgba(39,174,96,.15)}
+.char-lyra .char-header{background:linear-gradient(135deg,rgba(39,174,96,.1),rgba(39,174,96,.04));border-bottom:3px solid var(--green)}
+.char-lyra .char-avatar{color:var(--green2);background:rgba(39,174,96,.08)}
+.char-lyra .char-name{color:var(--green2)}
+.char-lyra .char-quote{border-color:var(--green)}
+.char-ariz{border-color:#7a4210}
+.char-ariz:hover{border-color:var(--orange);box-shadow:0 0 20px rgba(230,126,34,.15)}
+.char-ariz .char-header{background:linear-gradient(135deg,rgba(230,126,34,.1),rgba(230,126,34,.04));border-bottom:3px solid var(--orange)}
+.char-ariz .char-avatar{color:var(--orange);background:rgba(230,126,34,.08)}
+.char-ariz .char-name{color:var(--orange)}
+.char-ariz .char-quote{border-color:var(--orange)}
+.char-gork{border-color:#3d4545}
+.char-gork:hover{border-color:var(--steel2);box-shadow:0 0 20px rgba(127,140,141,.15)}
+.char-gork .char-header{background:linear-gradient(135deg,rgba(127,140,141,.1),rgba(127,140,141,.04));border-bottom:3px solid var(--steel)}
+.char-gork .char-avatar{color:var(--steel2);background:rgba(127,140,141,.08)}
+.char-gork .char-name{color:var(--steel2)}
+.char-gork .char-quote{border-color:var(--steel)}
+.char-oryn{border-color:#3d1a6e}
+.char-oryn:hover{border-color:#7c55cc;box-shadow:0 0 20px rgba(124,85,204,.15)}
+.char-oryn .char-header{background:linear-gradient(135deg,rgba(74,0,122,.15),rgba(74,0,122,.06));border-bottom:3px solid #7c55cc}
+.char-oryn .char-avatar{color:#b89cf0;background:rgba(74,0,122,.12)}
+.char-oryn .char-name{color:#b89cf0}
+.char-oryn .char-quote{border-color:#7c55cc}
+.char-serafyne{border-color:#5a1010}
+.char-serafyne:hover{border-color:var(--red);box-shadow:0 0 20px rgba(192,57,43,.15)}
+.char-serafyne .char-header{background:linear-gradient(135deg,rgba(192,57,43,.12),rgba(45,0,87,.12));border-bottom:3px solid var(--red)}
+.char-serafyne .char-avatar{color:var(--red);background:rgba(192,57,43,.08)}
+.char-serafyne .char-name{color:var(--red)}
+.char-serafyne .char-quote{border-color:var(--red)}
+/* ZONES */
+.zones-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+.zone-card{background:var(--navy2);border:3px solid var(--navy3);padding:18px;position:relative;transition:all .15s;overflow:hidden}
+.zone-card:hover{transform:translateY(-3px)}
+.zone-num{font-family:'Press Start 2P',monospace;font-size:22px;opacity:.12;position:absolute;top:10px;right:14px}
+.zone-icon{font-size:28px;display:block;margin-bottom:8px}
+.zone-name{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--gold);margin-bottom:6px;line-height:1.6}
+.zone-type{font-size:18px;color:var(--dim);margin-bottom:10px}
+.zone-badges{display:flex;flex-wrap:wrap;gap:4px}
+.badge{font-family:'Press Start 2P',monospace;font-size:5px;padding:3px 6px;display:inline-block}
+.badge-eclat{background:var(--gold-dim);color:var(--gold2)}
+.badge-acte{background:var(--shadow);color:#b89cf0;border:1px solid var(--shadow3)}
+.badge-hub{background:#1a3a1a;color:var(--green2);border:1px solid var(--green)}
+.badge-boss{background:#3a0a0a;color:#f08080;border:1px solid var(--red)}
+.zone-desc{font-size:17px;color:var(--dim);margin-top:10px;line-height:1.4}
+.zone-valdris{border-color:#1a3a1a}.zone-valdris:hover{border-color:var(--green)}
+.zone-mines{border-color:#1a2a3a}.zone-mines:hover{border-color:#6af}
+.zone-sylvara{border-color:#1a3a1a}.zone-sylvara:hover{border-color:var(--green2)}
+.zone-kharr{border-color:#3a2a0a}.zone-kharr:hover{border-color:var(--orange)}
+.zone-dernath{border-color:#1a1a3a}.zone-dernath:hover{border-color:#88f}
+.zone-tour{border-color:#2d1a3a}.zone-tour:hover{border-color:var(--shadow3)}
+/* SYSTÈME */
+.systeme-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:768px){.systeme-grid{grid-template-columns:1fr}}
+.sys-block{background:var(--navy);padding:24px}
+.sys-block-title{font-family:'Press Start 2P',monospace;font-size:8px;margin-bottom:16px}
+.ombre-bar{height:20px;background:var(--navy2);border:2px solid var(--shadow2);overflow:hidden;display:flex;margin-bottom:12px}
+.ombre-seg-n{width:49%;background:linear-gradient(90deg,#1a4a1a,#2a7a2a)}
+.ombre-seg-i{width:50%;background:linear-gradient(90deg,#7a4a00,#cc7700)}
+.ombre-seg-c{width:1%;background:var(--shadow3);box-shadow:0 0 10px var(--shadow3)}
+.ombre-levels{display:flex;flex-direction:column;gap:8px}
+.ombre-lvl{display:flex;align-items:center;gap:10px;padding:6px 10px;border:2px solid transparent}
+.ombre-pct{font-family:'Press Start 2P',monospace;font-size:6px;min-width:60px}
+.ombre-name{font-family:'Press Start 2P',monospace;font-size:7px}
+.ombre-desc{font-size:16px;color:var(--dim)}
+.ombre-n{border-color:var(--green);background:rgba(39,174,96,.05)}.ombre-n .ombre-pct,.ombre-n .ombre-name{color:var(--green2)}
+.ombre-i{border-color:var(--orange);background:rgba(230,126,34,.05)}.ombre-i .ombre-pct,.ombre-i .ombre-name{color:var(--orange)}
+.ombre-c{border-color:var(--shadow3);background:rgba(124,0,204,.08);animation:corruptFlicker 2s ease-in-out infinite}
+.ombre-c .ombre-pct,.ombre-c .ombre-name{color:var(--shadow3)}
+@keyframes corruptFlicker{0%,90%,100%{border-color:var(--shadow3)}95%{border-color:var(--red)}}
+.magie-mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.magie-card-mini{padding:12px;border:2px solid;font-size:16px}
+.mc-name{font-family:'Press Start 2P',monospace;font-size:6px;display:block;margin-bottom:4px}
+.mc-desc{color:var(--dim);line-height:1.4}
+.mc-sol{border-color:var(--gold-dim);background:rgba(240,165,0,.04)}.mc-sol .mc-name{color:var(--gold)}
+.mc-ter{border-color:#1a5c35;background:rgba(39,174,96,.04)}.mc-ter .mc-name{color:var(--green2)}
+.mc-omb{border-color:var(--shadow2);background:rgba(74,0,122,.06)}.mc-omb .mc-name{color:var(--shadow3)}
+.mc-ecl{border-color:#5a3090;background:rgba(90,48,144,.06)}.mc-ecl .mc-name{color:#d0a0ff}
+.combat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-top:4px}
+.combat-action{padding:12px;background:var(--navy2);border:2px solid var(--navy3);transition:border-color .15s}
+.combat-action:hover{border-color:var(--gold-dim)}
+.ca-icon{font-size:22px;display:block;margin-bottom:4px}
+.ca-name{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--gold);display:block;margin-bottom:4px}
+.ca-desc{font-size:16px;color:var(--dim);line-height:1.4}
+/* UNITY TRACKER */
+#unity{background:linear-gradient(135deg,rgba(15,22,40,.9),rgba(10,14,26,.9))}
+.tracker-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.filter-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:5px 10px;background:transparent;border:2px solid var(--navy3);color:var(--dim);cursor:pointer;transition:all .1s}
+.filter-btn.active,.filter-btn:hover{border-color:var(--gold);color:var(--gold)}
+.tracker-table{width:100%;border-collapse:collapse;font-size:18px}
+.tracker-table th{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);text-align:left;padding:8px 10px;border-bottom:2px solid var(--navy3);background:var(--navy2)}
+.tracker-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+.tracker-table tr:hover td{background:rgba(240,165,0,.02)}
+.tracker-module{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--white)}
+.tracker-file{font-size:15px;color:var(--dim);font-family:monospace;margin-top:3px}
+.tracker-notes{font-size:17px;color:var(--dim)}
+.status-pill{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;cursor:pointer;border:1px solid;transition:all .1s;white-space:nowrap;user-select:none}
+.status-pill:hover{filter:brightness(1.2)}
+.s-todo{color:var(--steel);border-color:var(--steel);background:rgba(127,140,141,.08)}
+.s-wip{color:var(--gold);border-color:var(--gold);background:rgba(240,165,0,.08)}
+.s-done{color:var(--green2);border-color:var(--green);background:rgba(39,174,96,.08)}
+.s-blocked{color:#f08080;border-color:var(--red);background:rgba(192,57,43,.08)}
+.cat-badge{font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 5px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--dim)}
+/* JOURNAL */
+#journal{background:rgba(10,14,26,.7)}
+.journal-add-btn{font-family:'Press Start 2P',monospace;font-size:7px;padding:8px 16px;background:transparent;border:2px solid var(--gold-dim);color:var(--gold);cursor:pointer;transition:all .1s;margin-bottom:24px;display:block}
+.journal-add-btn:hover{border-color:var(--gold);background:rgba(240,165,0,.06)}
+.journal-timeline{display:flex;flex-direction:column;gap:0}
+.journal-entry{display:flex;gap:0;position:relative}
+.journal-entry::before{content:'';position:absolute;left:119px;top:20px;bottom:-1px;width:2px;background:rgba(240,165,0,.15)}
+.journal-entry:last-child::before{display:none}
+.journal-left{min-width:120px;padding-right:16px;text-align:right;padding-top:4px;flex-shrink:0}
+.journal-date{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--gold);display:block}
+.journal-dot{width:10px;height:10px;background:var(--gold);flex-shrink:0;margin-top:6px;position:relative;z-index:1}
+.journal-right{flex:1;padding-left:16px;padding-bottom:28px}
+.journal-tags{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px}
+.jtag{font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 5px}
+.jtag-lore{background:rgba(74,0,122,.3);border:1px solid var(--shadow3);color:#d0a0ff}
+.jtag-code{background:rgba(39,174,96,.15);border:1px solid var(--green);color:var(--green2)}
+.jtag-art{background:rgba(230,126,34,.15);border:1px solid var(--orange);color:var(--orange)}
+.jtag-sys{background:rgba(240,165,0,.12);border:1px solid var(--gold-dim);color:var(--gold)}
+.jtag-custom{background:rgba(178,194,195,.08);border:1px solid var(--steel);color:var(--steel2)}
+.jtag{display:inline-flex;align-items:center;gap:3px}
+.del-tag-btn{background:transparent;border:none;color:inherit;cursor:pointer;opacity:.5;font-size:9px;padding:0 1px;line-height:1;transition:opacity .1s;display:none}
+.edit-mode .del-tag-btn{display:inline}
+.del-tag-btn:hover{opacity:1}
+.add-tag-btn{font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 5px;background:transparent;border:1px dashed var(--steel);color:var(--steel);cursor:pointer;transition:all .1s;display:none}
+.edit-mode .add-tag-btn{display:inline-block}
+.add-tag-btn:hover{border-color:var(--gold);color:var(--gold)}
+.journal-title{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--white);margin-bottom:6px}
+.journal-content{font-size:19px;color:var(--dim);line-height:1.5}
+/* ACTES */
+#actes{background:linear-gradient(135deg,rgba(15,22,40,.9),rgba(22,15,40,.9))}
+.actes-list{display:flex;flex-direction:column;gap:16px}
+.acte-card{background:var(--navy2);border:3px solid var(--navy3);overflow:hidden}
+.acte-header{padding:16px 20px;display:flex;align-items:center;gap:16px;cursor:pointer;transition:background .1s}
+.acte-header:hover{background:rgba(240,165,0,.03)}
+.acte-num{font-family:'Press Start 2P',monospace;font-size:18px;color:var(--gold);opacity:.3;min-width:32px}
+.acte-title{font-family:'Press Start 2P',monospace;font-size:9px;color:var(--white);flex:1}
+.acte-status{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;border:1px solid}
+.as-todo{color:var(--dim);border-color:var(--navy3)}
+.as-wip{color:var(--gold);border-color:var(--gold)}
+.as-done{color:var(--green2);border-color:var(--green)}
+.acte-toggle{background:transparent;border:none;color:var(--dim);cursor:pointer;font-size:14px;transition:transform .2s}
+.acte-toggle.open{transform:rotate(180deg)}
+.acte-body{display:none;padding:0 20px 20px}
+.acte-body.open{display:block}
+.acte-desc{font-size:19px;color:var(--dim);margin-bottom:16px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)}
+.scenes-list{display:flex;flex-direction:column;gap:6px}
+.scene-item{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--navy);border:1px solid rgba(255,255,255,.04)}
+.scene-type-badge{font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 5px;min-width:60px;text-align:center}
+.stype-combat{background:rgba(192,57,43,.2);border:1px solid var(--red);color:#f08080}
+.stype-dialogue{background:rgba(240,165,0,.1);border:1px solid var(--gold-dim);color:var(--gold)}
+.stype-exploration{background:rgba(39,174,96,.1);border:1px solid var(--green);color:var(--green2)}
+.stype-cutscene{background:rgba(74,0,122,.2);border:1px solid var(--shadow3);color:#d0a0ff}
+.scene-name{font-size:19px;color:var(--white);flex:1}
+.scene-check{width:14px;height:14px;border:2px solid var(--navy3);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .1s}
+.scene-check.done{background:var(--green);border-color:var(--green);color:var(--navy)}
+.add-scene-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;background:transparent;border:1px dashed var(--navy3);color:var(--dim);cursor:pointer;margin-top:8px;transition:all .1s}
+.add-scene-btn:hover{border-color:var(--gold-dim);color:var(--gold)}
+/* FINS */
+#fins{background:rgba(10,14,26,.8)}
+.fins-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.fin-card{padding:24px;border:3px solid;position:relative;overflow:hidden}
+.fin-card::before{content:'';position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;opacity:.06}
+.fin-num{font-family:'Press Start 2P',monospace;font-size:22px;opacity:.15;position:absolute;top:12px;right:16px}
+.fin-title{font-family:'Press Start 2P',monospace;font-size:8px;margin-bottom:8px}
+.fin-condition{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;display:inline-block;margin-bottom:12px}
+.fin-desc{font-size:18px;color:var(--dim);line-height:1.5}
+.fin-sacrifice{border-color:var(--gold)}.fin-sacrifice .fin-title{color:var(--gold)}.fin-sacrifice .fin-condition{background:rgba(240,165,0,.1);border:1px solid var(--gold-dim);color:var(--gold)}.fin-sacrifice::before{background:var(--gold)}
+.fin-troisieme{border-color:#7c55cc}.fin-troisieme .fin-title{color:#b89cf0}.fin-troisieme .fin-condition{background:rgba(124,85,204,.12);border:1px solid #7c55cc;color:#b89cf0}.fin-troisieme::before{background:#7c55cc}
+.fin-rupture{border-color:var(--shadow3)}.fin-rupture .fin-title{color:var(--shadow3)}.fin-rupture .fin-condition{background:rgba(124,0,204,.12);border:1px solid var(--shadow3);color:var(--shadow3)}.fin-rupture::before{background:var(--shadow3)}
+/* AVANCEMENT */
+#avancement{background:linear-gradient(135deg,rgba(10,14,26,.95),rgba(15,22,40,.95))}
+.avan-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.avan-col{background:var(--navy2);border:3px solid;padding:20px}
+.avan-col-done{border-color:var(--green)}
+.avan-col-wip{border-color:var(--gold)}
+.avan-col-todo{border-color:var(--red)}
+.avan-col-title{font-family:'Press Start 2P',monospace;font-size:8px;display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid rgba(255,255,255,.06)}
+.avan-col-done .avan-col-title{color:var(--green)}
+.avan-col-wip .avan-col-title{color:var(--gold)}
+.avan-col-todo .avan-col-title{color:var(--red)}
+.avan-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03);font-size:18px;line-height:1.4}
+.avan-item:last-child{border-bottom:none}
+.avan-icon{font-family:'Press Start 2P',monospace;font-size:7px;flex-shrink:0;margin-top:3px}
+.avan-col-done .avan-icon{color:var(--green)}
+.avan-col-done .avan-item{color:#a8c8a8}
+.avan-col-wip .avan-icon{color:var(--gold)}
+.avan-col-wip .avan-item{color:#c8b870}
+.avan-col-todo .avan-icon{color:var(--red)}
+.avan-col-todo .avan-item{color:#c89090}
+/* CUSTOM SECTIONS */
+.custom-section-wrap{background:var(--navy2);border:3px solid var(--navy3);padding:24px;margin-bottom:16px}
+.cs-free-text{font-size:19px;color:var(--white);line-height:1.7;min-height:60px}
+.cs-checklist{list-style:none;display:flex;flex-direction:column;gap:6px}
+.cs-check-item{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.cs-check-item:last-child{border-bottom:none}
+.cs-checkbox{width:16px;height:16px;border:2px solid var(--gold-dim);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .1s;background:transparent}
+.cs-checkbox.checked{background:var(--gold);border-color:var(--gold);color:var(--navy)}
+.cs-check-label{font-size:19px;flex:1;line-height:1.4}
+.cs-check-item.checked .cs-check-label{text-decoration:line-through;color:var(--dim);opacity:.6}
+.cs-table{width:100%;border-collapse:collapse;font-size:18px}
+.cs-table th{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);text-align:left;padding:6px 8px;border-bottom:2px solid rgba(255,255,255,.08)}
+.cs-table td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.cs-table tr:last-child td{border-bottom:none}
+.cs-table-key{color:var(--gold);min-width:120px}
+.cs-table-val{color:var(--white)}
+/* FOOTER */
+footer{background:var(--navy);border-top:4px solid var(--gold-dim);padding:32px 24px;text-align:center;position:relative;z-index:1}
+.footer-title{font-family:'Press Start 2P',monospace;font-size:11px;color:var(--gold);text-shadow:0 0 10px rgba(240,165,0,.5);margin-bottom:10px}
+.footer-sub{font-size:20px;color:var(--dim)}
+/* LOGIN SCREEN */
+#login-screen{position:fixed;inset:0;z-index:9999;background:var(--navy);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+#login-screen::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(240,165,0,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,165,0,0.03) 1px,transparent 1px);background-size:8px 8px;pointer-events:none}
+body.logged-in #login-screen{display:none}
+.login-sun{position:absolute;top:60px;right:20%;width:48px;height:48px;animation:sunPulse 4s ease-in-out infinite}
+.login-sun-core{position:absolute;inset:8px;background:var(--gold);box-shadow:0 0 0 3px var(--amber),0 0 20px 8px rgba(240,165,0,.3)}
+.login-sun::before{content:'';position:absolute;top:0;left:20px;width:8px;height:48px;background:var(--gold);opacity:.4}
+.login-sun::after{content:'';position:absolute;top:20px;left:0;width:48px;height:8px;background:var(--gold);opacity:.4}
+.login-box{background:var(--navy2);border:3px solid var(--gold);padding:40px;width:min(420px,94vw);position:relative;z-index:1}
+.login-title{font-family:'Press Start 2P',monospace;font-size:clamp(14px,3vw,20px);color:var(--gold);text-shadow:3px 3px 0 var(--amber),0 0 20px rgba(240,165,0,.5);text-align:center;margin-bottom:6px;animation:titleGlow 3s ease-in-out infinite}
+.login-subtitle{font-size:20px;color:var(--dim);text-align:center;margin-bottom:28px;letter-spacing:1px}
+.login-field{margin-bottom:16px}
+.login-label{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);display:block;margin-bottom:6px;letter-spacing:1px}
+.login-input{width:100%;background:var(--navy);border:2px solid var(--gold-dim);color:var(--white);font-family:'VT323',monospace;font-size:22px;padding:10px 12px;outline:none;transition:border-color .1s}
+.login-input:focus{border-color:var(--gold)}
+.login-error{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--red);min-height:20px;margin-bottom:12px;text-align:center}
+.login-btn{width:100%;font-family:'Press Start 2P',monospace;font-size:8px;padding:14px;background:var(--gold);color:var(--navy);border:none;cursor:pointer;transition:all .1s;margin-bottom:12px}
+.login-btn:hover{background:var(--gold2);box-shadow:0 0 16px rgba(240,165,0,.4)}
+.login-btn:active{transform:scale(.98)}
+.login-remember{font-family:'Press Start 2P',monospace;font-size:6px;color:var(--dim);display:flex;align-items:center;gap:8px;cursor:pointer;justify-content:center}
+.login-remember input{accent-color:var(--gold);cursor:pointer;width:12px;height:12px}
+/* ACCESS MODAL */
+.access-user-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.access-user-row:last-child{border-bottom:none}
+.access-username{font-family:'Press Start 2P',monospace;font-size:7px;color:var(--white);flex:1}
+.access-badge{font-family:'Press Start 2P',monospace;font-size:5px;padding:2px 6px;background:rgba(240,165,0,.1);border:1px solid var(--gold-dim);color:var(--gold)}
+.access-del-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:4px 8px;background:transparent;border:1px solid var(--red);color:var(--red);cursor:pointer;transition:all .1s}
+.access-del-btn:hover{background:rgba(192,57,43,.15)}
+.access-sep{height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:16px 0}
+/* NAV access btn */
+#access-btn,#logout-btn{font-family:'Press Start 2P',monospace;font-size:6px;padding:5px 8px;background:transparent;border:2px solid var(--navy3);color:var(--dim);cursor:pointer;transition:all .1s}
+#access-btn:hover{border-color:var(--steel2);color:var(--steel2)}
+#logout-btn:hover{border-color:var(--red);color:var(--red)}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:8px}
+::-webkit-scrollbar-track{background:var(--navy)}
+::-webkit-scrollbar-thumb{background:var(--gold-dim)}
+::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+/* RESPONSIVE */
+@media(max-width:600px){
+  .hero-title{font-size:20px}
+  .systeme-grid{grid-template-columns:1fr}
+  .magie-mini-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr}
+}
+</style>
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-sun"><div class="login-sun-core"></div></div>
+  <div class="login-box">
+    <div class="login-title">BROKEN SUNSHINE</div>
+    <div class="login-subtitle">Dev Dashboard · Accès restreint</div>
+    <div class="login-field">
+      <label class="login-label" for="login-user">IDENTIFIANT</label>
+      <input class="login-input" id="login-user" type="text" autocomplete="username" placeholder="ton identifiant..." onkeydown="if(event.key==='Enter')loginSubmit()">
+    </div>
+    <div class="login-field">
+      <label class="login-label" for="login-pass">MOT DE PASSE</label>
+      <input class="login-input" id="login-pass" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')loginSubmit()">
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <button class="login-btn" onclick="loginSubmit()">CONNEXION ▶</button>
+    <label class="login-remember"><input type="checkbox" id="login-remember"> Se souvenir de moi</label>
+  </div>
+</div>
+
+<!-- ACCESS MODAL -->
+<div class="modal-overlay" id="access-modal">
+  <div class="modal-box">
+    <div class="modal-title">⚙ GESTION DES ACCÈS</div>
+    <div id="access-user-list"></div>
+    <div class="access-sep"></div>
+    <div class="modal-field">
+      <label class="modal-label">NOUVEL IDENTIFIANT</label>
+      <input class="modal-input" id="new-user-name" type="text" placeholder="prénom ou pseudo...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">MOT DE PASSE</label>
+      <input class="modal-input" id="new-user-pass" type="password" placeholder="••••••••">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeAccessModal()">FERMER</button>
+      <button class="btn-confirm" onclick="addUser()">AJOUTER</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE PASSWORD MODAL -->
+<div class="modal-overlay" id="chpass-modal">
+  <div class="modal-box">
+    <div class="modal-title">🔑 CHANGER MON MOT DE PASSE</div>
+    <div class="modal-field">
+      <label class="modal-label">MOT DE PASSE ACTUEL</label>
+      <input class="modal-input" id="chpass-old" type="password" placeholder="••••••••">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">NOUVEAU MOT DE PASSE</label>
+      <input class="modal-input" id="chpass-new" type="password" placeholder="••••••••">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">CONFIRMER</label>
+      <input class="modal-input" id="chpass-confirm" type="password" placeholder="••••••••">
+    </div>
+    <div class="login-error" id="chpass-error" style="text-align:left;min-height:16px;margin:8px 0"></div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeChpassModal()">ANNULER</button>
+      <button class="btn-confirm" onclick="changePassword()">CONFIRMER</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <span class="torch"></span>
+    <a href="#hero">❖ ACCUEIL</a>
+    <a href="#synopsis">SYNOPSIS</a>
+    <a href="#tech">TECHNIQUE</a>
+    <a href="#personnages">HÉROS</a>
+    <a href="#zones">ZONES</a>
+    <a href="#systeme">SYSTÈME</a>
+    <a href="#unity">UNITY</a>
+    <a href="#journal">JOURNAL</a>
+    <a href="#actes">ACTES</a>
+    <a href="#fins">FINS</a>
+    <a href="#avancement">AVANCEMENT</a>
+    <span class="torch"></span>
+    <button id="access-btn" onclick="openAccessModal()" title="Gérer les accès">⚙ ACCÈS</button>
+    <button id="logout-btn" onclick="logoutUser()" title="Se déconnecter">⏻ QUITTER</button>
+    <button id="edit-toggle" onclick="toggleEdit()">✎ ÉDITER</button>
+    <button id="export-btn" onclick="exportData()">⬇ EXPORT</button>
+    <button id="import-btn" onclick="document.getElementById('import-input').click()">⬆ IMPORT</button>
+    <button id="reset-btn" onclick="resetData()">↺ RESET</button>
+    <button id="save-file-btn" onclick="saveToFile()" title="Télécharge un index.html avec toutes tes modifications intégrées">💾 SAUVEGARDER</button>
+    <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
+  </div>
+</nav>
+
+<!-- TOAST -->
+<div id="toast">✓ SAUVEGARDÉ</div>
+
+<!-- ADD SECTION FAB -->
+<button id="add-section-fab" onclick="openAddModal()" title="Nouvelle section">+</button>
+
+<!-- MODAL ADD SECTION -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal-box">
+    <div class="modal-title">✦ NOUVELLE SECTION</div>
+    <div class="modal-field">
+      <label class="modal-label">TITRE</label>
+      <input class="modal-input" id="new-section-title" type="text" placeholder="Nom de la section...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">TYPE</label>
+      <select class="modal-select" id="new-section-type">
+        <option value="notes">Notes libres</option>
+        <option value="checklist">Checklist</option>
+        <option value="table">Tableau clé/valeur</option>
+        <option value="journal">Journal / Timeline</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeAddModal()">ANNULER</button>
+      <button class="btn-confirm" onclick="createSection()">CRÉER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ HERO ═══════════════════════════════════════ -->
+<div id="hero">
+  <div class="hero-sun"><div class="hero-sun-core"></div></div>
+  <h1 class="hero-title">BROKEN SUNSHINE</h1>
+  <div class="hero-subtitle">RPG 2D Tour par Tour · Aethoria</div>
+  <div class="hero-divider"></div>
+  <div class="hero-meta">
+    <div class="hero-meta-item"><span>VERSION</span>v2.0 — Dev Dashboard</div>
+    <div class="hero-meta-item"><span>MOTEUR</span>Unity 2D · C#</div>
+    <div class="hero-meta-item"><span>STYLE</span>Pixel Art 128px · Vue 3/4</div>
+    <div class="hero-meta-item"><span>MAJ</span id="last-updated-display">—</div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label">
+      <span>AVANCEMENT GLOBAL</span>
+      <em id="progress-display">0%</em>
+    </div>
+    <div class="progress-outer">
+      <div class="progress-inner" id="progress-bar" style="width:0%"></div>
+    </div>
+  </div>
+  <div class="scroll-hint" style="margin-top:32px">SCROLL</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════ SYNOPSIS ═══════════════════════════════════════ -->
+<div id="synopsis" style="background:linear-gradient(135deg,rgba(15,22,40,.95),rgba(22,31,58,.95));border-top:4px solid var(--gold-dim);border-bottom:4px solid var(--gold-dim)">
+  <section class="page-section section-wrapper" data-section-id="synopsis">
+    <div class="section-controls">
+      <button onclick="renameSection(this)">✎ Renommer</button>
+    </div>
+    <h2 class="section-title">SYNOPSIS</h2>
+    <div class="synopsis-box">
+      <p class="synopsis-text" data-editable>Depuis trois lunes, le Soleil pâlit. Les moissons meurent. Un artefact antique — le <strong>Cœur d'Aethar</strong> — a été brisé en quatre éclats dispersés aux quatre coins du royaume. Kairo, jeune forgeron porteur de la marque solaire, est l'Élu censé réunifier le Cœur.</p>
+      <p class="synopsis-twist" data-editable>Twist central : les Aethars n'étaient pas des dieux bienveillants. Ce sont des entités parasites qui se nourrissaient de l'énergie vitale d'Aethoria via le Cœur. Réunifier le Cœur les réveillerait. L'antagoniste Serafyne Vel veut détruire le Cœur — et elle a probablement raison.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ═══════════════════════════════════════ TECHNIQUE ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="tech" data-section-id="tech">
+  <div class="section-controls">
+    <button onclick="renameSection(this)">✎ Renommer</button>
+  </div>
+  <h2 class="section-title">FICHE TECHNIQUE</h2>
+  <div class="tech-grid" id="tech-grid">
+    <div class="tech-card"><span class="tech-icon">⚔</span><span class="tech-label">GENRE</span><span class="tech-value" data-editable>RPG 2D Tour par Tour</span></div>
+    <div class="tech-card"><span class="tech-icon">🎮</span><span class="tech-label">MOTEUR</span><span class="tech-value" data-editable>Unity 2D + VS Code (C#)</span></div>
+    <div class="tech-card"><span class="tech-icon">🎨</span><span class="tech-label">STYLE VISUEL</span><span class="tech-value" data-editable>Pixel Art Dragon Quest 128px, vue 3/4</span></div>
+    <div class="tech-card"><span class="tech-icon">📖</span><span class="tech-label">CAMPAGNE</span><span class="tech-value" data-editable>3 à 5 sessions, scénario solo</span></div>
+    <div class="tech-card"><span class="tech-icon">🌍</span><span class="tech-label">MONDE</span><span class="tech-value" data-editable>Aethoria — royaume fantasy épées &amp; magie</span></div>
+    <div class="tech-card"><span class="tech-icon">💻</span><span class="tech-label">ÉTAT CODE</span><span class="tech-value" data-editable>Zéro code initié — phase conception</span></div>
+  </div>
+  <button class="add-item-btn edit-ctrl" onclick="addTechCard()">+ Ajouter une info</button>
+</section>
+
+<!-- ═══════════════════════════════════════ PERSONNAGES ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="personnages" data-section-id="personnages" style="background:rgba(10,14,26,.5)">
+  <div class="section-controls">
+    <button onclick="renameSection(this)">✎ Renommer</button>
+  </div>
+  <h2 class="section-title">PERSONNAGES</h2>
+  <div class="char-grid">
+
+    <!-- KAIRO -->
+    <div class="char-card char-kairo">
+      <div class="char-header" onclick="toggleChar('kairo')">
+        <div class="char-avatar">⚒</div>
+        <div>
+          <div class="char-name" data-editable>KAIRO</div>
+          <div class="char-role" data-editable>Héros Principal · 16 ans · Forgeron</div>
+        </div>
+        <button class="char-expand-btn" id="btn-kairo">▼</button>
+      </div>
+      <div class="char-body">
+        <div class="char-quote" data-editable>« La marque brûle davantage chaque jour. »</div>
+        <div class="char-tags">
+          <span class="char-tag">Porteur de marque</span>
+          <span class="char-tag corrupt-yes">canBeCorrupted</span>
+          <span class="char-tag">Actes 1–3</span>
+        </div>
+      </div>
+      <div class="char-full" id="char-full-kairo">
+        <div class="char-section-title">— STATS DE BASE —</div>
+        <div class="stats-grid">
+          <div class="stat-row"><span class="stat-lbl">PV</span><div class="stat-bar"><div class="stat-fill" style="width:75%"></div></div><span class="stat-val" data-editable>75</span></div>
+          <div class="stat-row"><span class="stat-lbl">Force</span><div class="stat-bar"><div class="stat-fill" style="width:70%"></div></div><span class="stat-val" data-editable>70</span></div>
+          <div class="stat-row"><span class="stat-lbl">Magie</span><div class="stat-bar"><div class="stat-fill" style="width:55%"></div></div><span class="stat-val" data-editable>55</span></div>
+          <div class="stat-row"><span class="stat-lbl">Agi</span><div class="stat-bar"><div class="stat-fill" style="width:50%"></div></div><span class="stat-val" data-editable>50</span></div>
+          <div class="stat-row"><span class="stat-lbl">Def</span><div class="stat-bar"><div class="stat-fill" style="width:55%"></div></div><span class="stat-val" data-editable>55</span></div>
+          <div class="stat-row"><span class="stat-lbl">PL</span><div class="stat-bar"><div class="stat-fill" style="width:80%"></div></div><span class="stat-val" data-editable>80</span></div>
+        </div>
+        <div class="char-section-title">— SORTS (PL) —</div>
+        <table class="sorts-table" id="sorts-kairo">
+          <thead><tr><th>Sort</th><th>Coût</th><th>Effet</th><th>Ombre</th><th class="edit-ctrl"></th></tr></thead>
+          <tbody>
+            <tr><td data-editable>Éclat de lumière</td><td class="sort-cost-cell" data-editable>10 PL</td><td data-editable>Projectile solaire. Efficace contre les spectres.</td><td class="sort-ombre-cell" data-editable>+10%</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Soin de terre</td><td class="sort-cost-cell" data-editable>5 PL</td><td data-editable>Restaure 20 PV à un allié.</td><td class="sort-ombre-cell" data-editable>+5%</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Frappe solaire</td><td class="sort-cost-cell" data-editable>20 PL</td><td data-editable>Corps à corps + onde lumineuse. Débloqué Éclat 1.</td><td class="sort-ombre-cell" data-editable>+20%</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Bouclier d'écorce</td><td class="sort-cost-cell" data-editable>15 PL</td><td data-editable>Bouclier 2 tours, absorbe 30% dégâts. Éclat 2.</td><td class="sort-ombre-cell" data-editable>+15%</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Pulse d'ombre</td><td class="sort-cost-cell" data-editable>35 PL</td><td data-editable>Zone large. Très corrupteur. Éclat 3.</td><td class="sort-ombre-cell" data-editable>+35%</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Aurore Brisée</td><td class="sort-cost-cell" data-editable>60 PL</td><td data-editable>Sort ultime dévastateur. Éclat 4.</td><td class="sort-ombre-cell" data-editable>+60%</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          </tbody>
+        </table>
+        <button class="add-item-btn edit-ctrl" onclick="addSortRow('sorts-kairo')">+ Sort</button>
+        <div class="char-section-title">— ARC NARRATIF —</div>
+        <div id="arc-kairo">
+          <div class="arc-item"><span class="arc-num">S1</span><span data-editable>L'Éveil — Kairo découvre sa marque et quitte Valdris.</span></div>
+          <div class="arc-item"><span class="arc-num">S2</span><span data-editable>La Méfiance — Il apprend la vérité sur les Aethars.</span></div>
+          <div class="arc-item"><span class="arc-num">S3</span><span data-editable>La Tentation — La corruption l'appelle.</span></div>
+          <div class="arc-item"><span class="arc-num">S4</span><span data-editable>Le Choix — Réunifier ou détruire le Cœur ?</span></div>
+          <div class="arc-item"><span class="arc-num">S5</span><span data-editable>Le Sacrifice — Quelle que soit la fin, il paie le prix.</span></div>
+        </div>
+        <div class="char-section-title">— SECRETS (SPOILERS) —</div>
+        <div class="secret-item" data-editable>La Marque Solaire le détruira s'il réunifie le Cœur seul. Oryn le sait et ne lui dit pas.</div>
+        <div class="secret-item" data-editable>Son père a gravé son prénom sur le manche du marteau — Kairo ne l'a jamais remarqué.</div>
+        <span class="corrupt-badge corrupt-yes">⚠ canBeCorrupted = true</span>
+      </div>
+    </div>
+
+    <!-- ORYN -->
+    <div class="char-card char-oryn">
+      <div class="char-header" onclick="toggleChar('oryn')">
+        <div class="char-avatar">🦯</div>
+        <div>
+          <div class="char-name" data-editable>ORYN L'ÉTOURDI</div>
+          <div class="char-role" data-editable>Mentor · 95 ans · Fondateur de l'Ordre</div>
+        </div>
+        <button class="char-expand-btn" id="btn-oryn">▼</button>
+      </div>
+      <div class="char-body">
+        <div class="char-quote" data-editable>« Je t'ai menti par amour, pas par lâcheté. »</div>
+        <div class="char-tags"><span class="char-tag">Jambe de bois</span><span class="char-tag">Marque gauche</span><span class="char-tag corrupt-no">Acte 1 uniquement</span></div>
+      </div>
+      <div class="char-full" id="char-full-oryn">
+        <div class="char-section-title">— STATS DE BASE —</div>
+        <div class="stats-grid">
+          <div class="stat-row"><span class="stat-lbl">PV</span><div class="stat-bar"><div class="stat-fill" style="width:55%"></div></div><span class="stat-val" data-editable>55</span></div>
+          <div class="stat-row"><span class="stat-lbl">Force</span><div class="stat-bar"><div class="stat-fill" style="width:30%"></div></div><span class="stat-val" data-editable>30</span></div>
+          <div class="stat-row"><span class="stat-lbl">Magie</span><div class="stat-bar"><div class="stat-fill" style="width:90%;background:linear-gradient(90deg,#5a3090,#b89cf0)"></div></div><span class="stat-val" data-editable>90</span></div>
+          <div class="stat-row"><span class="stat-lbl">Agi</span><div class="stat-bar"><div class="stat-fill" style="width:35%"></div></div><span class="stat-val" data-editable>35</span></div>
+          <div class="stat-row"><span class="stat-lbl">Def</span><div class="stat-bar"><div class="stat-fill" style="width:40%"></div></div><span class="stat-val" data-editable>40</span></div>
+          <div class="stat-row"><span class="stat-lbl">PL</span><div class="stat-bar"><div class="stat-fill" style="width:95%;background:linear-gradient(90deg,#5a3090,#b89cf0)"></div></div><span class="stat-val" data-editable>95</span></div>
+        </div>
+        <div class="char-section-title">— SORTS (PL) — Acte 1 uniquement</div>
+        <table class="sorts-table" id="sorts-oryn">
+          <thead><tr><th>Sort</th><th>Coût</th><th>Effet</th><th class="edit-ctrl"></th></tr></thead>
+          <tbody>
+            <tr><td data-editable>Soin de lumière</td><td class="sort-cost-cell" data-editable>8 PL</td><td data-editable>Restaure PV d'un allié ou relève un KO.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Bouclier ancien</td><td class="sort-cost-cell" data-editable>12 PL</td><td data-editable>Bouclier 2 tours sur un allié.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Éclair de l'Ordre</td><td class="sort-cost-cell" data-editable>15 PL</td><td data-editable>Seul sort offensif. Très coûteux.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Purification</td><td class="sort-cost-cell" data-editable>10 PL</td><td data-editable>UNIQUE : réduit jauge d'Ombre de Kairo de 20%.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          </tbody>
+        </table>
+        <button class="add-item-btn edit-ctrl" onclick="addSortRow('sorts-oryn')">+ Sort</button>
+        <div class="char-section-title">— SECRETS —</div>
+        <div class="secret-item" data-editable>Sait que la marque détruira Kairo. Ne lui dit pas.</div>
+        <div class="secret-item" data-editable>Marque gauche (Oryn) + marque droite (Kairo) au rituel = coût divisé entre les deux. Les deux meurent.</div>
+        <div class="secret-item" data-editable>Serafyne était son élève directe (15 ans). Il pense qu'elle a raison mais ne l'admettra jamais.</div>
+        <div class="secret-item" data-editable>La Chute du Cristal : il y a 45 ans, il trébucha sur sa propre robe et déclencha l'explosion qui lui arracha la jambe.</div>
+        <span class="corrupt-badge corrupt-no">✓ canBeCorrupted = false</span>
+      </div>
+    </div>
+
+    <!-- LYRA -->
+    <div class="char-card char-lyra">
+      <div class="char-header" onclick="toggleChar('lyra')">
+        <div class="char-avatar">🌿</div>
+        <div>
+          <div class="char-name" data-editable>LYRA</div>
+          <div class="char-role" data-editable>Soigneuse · 18 ans · Demi-Elfe de Sylvara</div>
+        </div>
+        <button class="char-expand-btn" id="btn-lyra">▼</button>
+      </div>
+      <div class="char-body">
+        <div class="char-quote" data-editable>« Je ne dois rien à mon père. Et lui ne me doit rien. »</div>
+        <div class="char-tags"><span class="char-tag">Demi-elfe</span><span class="char-tag">Meilleure soigneuse</span><span class="char-tag corrupt-no">Actes 2–3</span></div>
+      </div>
+      <div class="char-full" id="char-full-lyra">
+        <div class="char-section-title">— STATS DE BASE —</div>
+        <div class="stats-grid">
+          <div class="stat-row"><span class="stat-lbl">PV</span><div class="stat-bar"><div class="stat-fill" style="width:50%"></div></div><span class="stat-val" data-editable>50</span></div>
+          <div class="stat-row"><span class="stat-lbl">Force</span><div class="stat-bar"><div class="stat-fill" style="width:25%"></div></div><span class="stat-val" data-editable>25</span></div>
+          <div class="stat-row"><span class="stat-lbl">Magie</span><div class="stat-bar"><div class="stat-fill" style="width:75%;background:linear-gradient(90deg,#1a5c35,var(--green2))"></div></div><span class="stat-val" data-editable>75</span></div>
+          <div class="stat-row"><span class="stat-lbl">Agi</span><div class="stat-bar"><div class="stat-fill" style="width:70%;background:linear-gradient(90deg,#1a5c35,var(--green2))"></div></div><span class="stat-val" data-editable>70</span></div>
+          <div class="stat-row"><span class="stat-lbl">Def</span><div class="stat-bar"><div class="stat-fill" style="width:35%"></div></div><span class="stat-val" data-editable>35</span></div>
+          <div class="stat-row"><span class="stat-lbl">PL</span><div class="stat-bar"><div class="stat-fill" style="width:85%;background:linear-gradient(90deg,#1a5c35,var(--green2))"></div></div><span class="stat-val" data-editable>85</span></div>
+        </div>
+        <div class="char-section-title">— SORTS (PL) —</div>
+        <table class="sorts-table" id="sorts-lyra">
+          <thead><tr><th>Sort</th><th>Coût</th><th>Effet</th><th class="edit-ctrl"></th></tr></thead>
+          <tbody>
+            <tr><td data-editable>Soin naturel</td><td class="sort-cost-cell" data-editable>6 PL</td><td data-editable>Soin allié. Plus efficace qu'Oryn pour un coût moindre.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Relève forestière</td><td class="sort-cost-cell" data-editable>14 PL</td><td data-editable>Relève KO + 40% PV max.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Racines liantes</td><td class="sort-cost-cell" data-editable>10 PL</td><td data-editable>Immobilise ennemi 1 tour. Aucun dégât.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Barrière de sève</td><td class="sort-cost-cell" data-editable>16 PL</td><td data-editable>Bouclier groupe 1 tour.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          </tbody>
+        </table>
+        <button class="add-item-btn edit-ctrl" onclick="addSortRow('sorts-lyra')">+ Sort</button>
+        <div class="char-section-title">— PASSIF —</div>
+        <div class="secret-item" data-editable>Communion sylvestre : PL se régénèrent en zone de forêt.</div>
+        <div class="char-section-title">— BACKGROUND CLÉ —</div>
+        <div class="secret-item" data-editable>Fille illégitime du chef elfique Sylorn. Rejetée à 14 ans lors du rituel de passage. Vit seule en forêt depuis.</div>
+        <div class="secret-item" data-editable>N'a jamais pleuré devant personne. Confrontation avec Sylorn en Acte 2 — si Kairo la soutient, sa confiance monte significativement.</div>
+        <span class="corrupt-badge corrupt-no">✓ canBeCorrupted = false</span>
+      </div>
+    </div>
+
+    <!-- ARIZ -->
+    <div class="char-card char-ariz">
+      <div class="char-header" onclick="toggleChar('ariz')">
+        <div class="char-avatar">🗡</div>
+        <div>
+          <div class="char-name" data-editable>ARIZ</div>
+          <div class="char-role" data-editable>Voleur · 20 ans · Désert de Kharr</div>
+        </div>
+        <button class="char-expand-btn" id="btn-ariz">▼</button>
+      </div>
+      <div class="char-body">
+        <div class="char-quote" data-editable>« Le désert m'a appris une chose : le plus rapide survit. »</div>
+        <div class="char-tags"><span class="char-tag">Agilité 95 — 1er chaque round</span><span class="char-tag corrupt-no">PC (pas de magie)</span><span class="char-tag">Acte 2–3</span></div>
+      </div>
+      <div class="char-full" id="char-full-ariz">
+        <div class="char-section-title">— STATS DE BASE —</div>
+        <div class="stats-grid">
+          <div class="stat-row"><span class="stat-lbl">PV</span><div class="stat-bar"><div class="stat-fill" style="width:48%;background:linear-gradient(90deg,#7a2a00,var(--orange))"></div></div><span class="stat-val" data-editable>48</span></div>
+          <div class="stat-row"><span class="stat-lbl">Force</span><div class="stat-bar"><div class="stat-fill" style="width:50%;background:linear-gradient(90deg,#7a2a00,var(--orange))"></div></div><span class="stat-val" data-editable>50</span></div>
+          <div class="stat-row"><span class="stat-lbl">Magie</span><div class="stat-bar"><div class="stat-fill" style="width:0%"></div></div><span class="stat-val" data-editable>0</span></div>
+          <div class="stat-row"><span class="stat-lbl">Agi</span><div class="stat-bar"><div class="stat-fill" style="width:95%;background:linear-gradient(90deg,#7a2a00,var(--orange))"></div></div><span class="stat-val" data-editable>95</span></div>
+          <div class="stat-row"><span class="stat-lbl">Def</span><div class="stat-bar"><div class="stat-fill" style="width:30%;background:linear-gradient(90deg,#7a2a00,var(--orange))"></div></div><span class="stat-val" data-editable>30</span></div>
+          <div class="stat-row"><span class="stat-lbl">PC</span><div class="stat-bar"><div class="stat-fill" style="width:75%;background:linear-gradient(90deg,#7a2a00,var(--orange))"></div></div><span class="stat-val" data-editable>75</span></div>
+        </div>
+        <div class="char-section-title">— COMPÉTENCES (PC) —</div>
+        <table class="sorts-table" id="sorts-ariz">
+          <thead><tr><th>Compétence</th><th>Coût</th><th>Effet</th><th class="edit-ctrl"></th></tr></thead>
+          <tbody>
+            <tr><td data-editable>Frappe sournoise</td><td class="sort-cost-cell" data-editable>8 PC</td><td data-editable>Dégâts bonus si Ariz agit en premier ce tour.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Crochet paralysant</td><td class="sort-cost-cell" data-editable>12 PC</td><td data-editable>Désarme ou immobilise ennemi 1 tour.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Disparition</td><td class="sort-cost-cell" data-editable>10 PC</td><td data-editable>Non-ciblé 1 tour. Survie essentielle vu ses PV faibles.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Vol à la tire</td><td class="sort-cost-cell" data-editable>6 PC</td><td data-editable>Dérobe un consommable sur un ennemi.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Double frappe</td><td class="sort-cost-cell" data-editable>18 PC</td><td data-editable>Deux attaques consécutives. Dévastateur.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          </tbody>
+        </table>
+        <button class="add-item-btn edit-ctrl" onclick="addSortRow('sorts-ariz')">+ Compétence</button>
+        <div class="char-section-title">— PASSIF —</div>
+        <div class="secret-item" data-editable>Instinct du désert : PC regen accru + esquive bonus en zone désertique.</div>
+        <span class="corrupt-badge corrupt-no">✓ canBeCorrupted = false</span>
+      </div>
+    </div>
+
+    <!-- GORK -->
+    <div class="char-card char-gork">
+      <div class="char-header" onclick="toggleChar('gork')">
+        <div class="char-avatar">🛡</div>
+        <div>
+          <div class="char-name" data-editable>GORK</div>
+          <div class="char-role" data-editable>Tank · 24 ans · Ex-chevalier révoqué</div>
+        </div>
+        <button class="char-expand-btn" id="btn-gork">▼</button>
+      </div>
+      <div class="char-body">
+        <div class="char-quote" data-editable>« Mettez-vous derrière moi. C'est tout ce que je sais faire. »</div>
+        <div class="char-tags"><span class="char-tag">PV 100 — tank</span><span class="char-tag">Def 90</span><span class="char-tag corrupt-no">Dernier à agir (Agi 15)</span></div>
+      </div>
+      <div class="char-full" id="char-full-gork">
+        <div class="char-section-title">— STATS DE BASE —</div>
+        <div class="stats-grid">
+          <div class="stat-row"><span class="stat-lbl">PV</span><div class="stat-bar"><div class="stat-fill" style="width:100%;background:linear-gradient(90deg,#3d4545,var(--steel2))"></div></div><span class="stat-val" data-editable>100</span></div>
+          <div class="stat-row"><span class="stat-lbl">Force</span><div class="stat-bar"><div class="stat-fill" style="width:88%;background:linear-gradient(90deg,#3d4545,var(--steel2))"></div></div><span class="stat-val" data-editable>88</span></div>
+          <div class="stat-row"><span class="stat-lbl">Magie</span><div class="stat-bar"><div class="stat-fill" style="width:0%"></div></div><span class="stat-val" data-editable>0</span></div>
+          <div class="stat-row"><span class="stat-lbl">Agi</span><div class="stat-bar"><div class="stat-fill" style="width:15%;background:linear-gradient(90deg,#3d4545,var(--steel2))"></div></div><span class="stat-val" data-editable>15</span></div>
+          <div class="stat-row"><span class="stat-lbl">Def</span><div class="stat-bar"><div class="stat-fill" style="width:90%;background:linear-gradient(90deg,#3d4545,var(--steel2))"></div></div><span class="stat-val" data-editable>90</span></div>
+          <div class="stat-row"><span class="stat-lbl">PC</span><div class="stat-bar"><div class="stat-fill" style="width:70%;background:linear-gradient(90deg,#3d4545,var(--steel2))"></div></div><span class="stat-val" data-editable>70</span></div>
+        </div>
+        <div class="char-section-title">— COMPÉTENCES (PC) —</div>
+        <table class="sorts-table" id="sorts-gork">
+          <thead><tr><th>Compétence</th><th>Coût</th><th>Effet</th><th class="edit-ctrl"></th></tr></thead>
+          <tbody>
+            <tr><td data-editable>Frappe lourde</td><td class="sort-cost-cell" data-editable>10 PC</td><td data-editable>Coup dévastateur. Peut étourdir l'ennemi.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Provocation</td><td class="sort-cost-cell" data-editable>8 PC</td><td data-editable>Force tous les ennemis à cibler Gork 2 tours.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Bouclier levé</td><td class="sort-cost-cell" data-editable>6 PC</td><td data-editable>Réduit massivement les dégâts reçus ce tour.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Charge</td><td class="sort-cost-cell" data-editable>14 PC</td><td data-editable>Renverse ennemi 1 tour. Sa compétence préférée.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Mur de chair</td><td class="sort-cost-cell" data-editable>12 PC</td><td data-editable>Absorbe toute attaque visant un allié KO pendant 1 tour.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          </tbody>
+        </table>
+        <button class="add-item-btn edit-ctrl" onclick="addSortRow('sorts-gork')">+ Compétence</button>
+        <div class="char-section-title">— PASSIF —</div>
+        <div class="secret-item" data-editable>Serment du chevalier : bonus Force/Défense quand un allié tombe sous 20% PV.</div>
+        <span class="corrupt-badge corrupt-no">✓ canBeCorrupted = false</span>
+      </div>
+    </div>
+
+    <!-- SERAFYNE -->
+    <div class="char-card char-serafyne">
+      <div class="char-header" onclick="toggleChar('serafyne')">
+        <div class="char-avatar">💀</div>
+        <div>
+          <div class="char-name" data-editable>SERAFYNE VEL</div>
+          <div class="char-role" data-editable>Antagoniste · 38 ans · Archimage renégate</div>
+        </div>
+        <button class="char-expand-btn" id="btn-serafyne">▼</button>
+      </div>
+      <div class="char-body">
+        <div class="char-quote" data-editable>« Je ne voulais pas que ça se passe comme ça. »</div>
+        <div class="char-tags"><span class="char-tag">Marque au cou gauche</span><span class="char-tag corrupt-yes">canBeCorrupted</span><span class="char-tag">Ancienne élève d'Oryn</span></div>
+      </div>
+      <div class="char-full" id="char-full-serafyne">
+        <div class="char-section-title">— STATS DE BASE —</div>
+        <div class="stats-grid">
+          <div class="stat-row"><span class="stat-lbl">PV</span><div class="stat-bar"><div class="stat-fill" style="width:85%;background:linear-gradient(90deg,#5a1010,var(--red))"></div></div><span class="stat-val" data-editable>85</span></div>
+          <div class="stat-row"><span class="stat-lbl">Force</span><div class="stat-bar"><div class="stat-fill" style="width:45%;background:linear-gradient(90deg,#5a1010,var(--red))"></div></div><span class="stat-val" data-editable>45</span></div>
+          <div class="stat-row"><span class="stat-lbl">Magie</span><div class="stat-bar"><div class="stat-fill" style="width:98%;background:linear-gradient(90deg,#5a1010,var(--red))"></div></div><span class="stat-val" data-editable>98</span></div>
+          <div class="stat-row"><span class="stat-lbl">Agi</span><div class="stat-bar"><div class="stat-fill" style="width:60%;background:linear-gradient(90deg,#5a1010,var(--red))"></div></div><span class="stat-val" data-editable>60</span></div>
+          <div class="stat-row"><span class="stat-lbl">Def</span><div class="stat-bar"><div class="stat-fill" style="width:50%;background:linear-gradient(90deg,#5a1010,var(--red))"></div></div><span class="stat-val" data-editable>50</span></div>
+          <div class="stat-row"><span class="stat-lbl">PL</span><div class="stat-bar"><div class="stat-fill" style="width:100%;background:linear-gradient(90deg,#5a1010,var(--red))"></div></div><span class="stat-val" data-editable>100</span></div>
+        </div>
+        <div class="char-section-title">— SORTS —</div>
+        <table class="sorts-table" id="sorts-serafyne">
+          <thead><tr><th>Sort</th><th>Type</th><th>Effet</th><th class="edit-ctrl"></th></tr></thead>
+          <tbody>
+            <tr><td data-editable>Fracture d'ombre</td><td class="sort-cost-cell" data-editable>Zone</td><td data-editable>Onde sombre sur tout le groupe. Remplit massivement la Jauge d'Ombre de Kairo.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Cristal noir</td><td class="sort-cost-cell" data-editable>Cible</td><td data-editable>Dégâts élevés + statut Gelé (passe son tour suivant).</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Voile de nuit</td><td class="sort-cost-cell" data-editable>Défense</td><td data-editable>Bouclier absorbant tout. Deux attaques consécutives pour le briser.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Invocation Voiles</td><td class="sort-cost-cell" data-editable>Invoc.</td><td data-editable>Phase 2 uniquement : fait apparaître 2 cultistes en renfort.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Éclipse totale</td><td class="sort-cost-cell" data-editable>Zone</td><td data-editable>Phase 3. Ignore boucliers. Gork peut absorber via Mur de chair.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+            <tr><td data-editable>Miroir de marque</td><td class="sort-cost-cell" data-editable>Passif</td><td data-editable>Absorbe 15% des dégâts de lumière de Kairo et les retourne sur le groupe.</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          </tbody>
+        </table>
+        <button class="add-item-btn edit-ctrl" onclick="addSortRow('sorts-serafyne')">+ Sort</button>
+        <div class="char-section-title">— VÉRITÉ &amp; MOTIVATION —</div>
+        <div class="secret-item" data-editable>A traduit les archives scellées de l'Ordre : les Aethars étaient des entités parasites. Réunifier le Cœur = les réveiller.</div>
+        <div class="secret-item" data-editable>Son plan : détruire le Cœur. Ce qu'elle ne dit pas : la destruction = décharge colossale, des milliers de morts.</div>
+        <div class="secret-item" data-editable>Ce qu'elle ignore : l'entité se nourrit du conflit entre elle et Kairo. Elles sont toutes deux des pions.</div>
+        <div class="secret-item" data-editable>La blessure la plus profonde : Oryn savait qu'elle avait raison sur les Aethars. Il n'a rien dit lors de son expulsion.</div>
+        <span class="corrupt-badge corrupt-yes">⚠ canBeCorrupted = true</span>
+      </div>
+    </div>
+
+  </div><!-- /char-grid -->
+</section>
+
+<!-- ═══════════════════════════════════════ ZONES ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="zones" data-section-id="zones" style="background:rgba(10,14,26,.6)">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">ZONES</h2>
+  <div class="zones-grid">
+    <div class="zone-card zone-valdris"><span class="zone-num">01</span><span class="zone-icon">🏙</span><div class="zone-name" data-editable>VALDRIS</div><div class="zone-type" data-editable>Cité de départ — Hub central</div><div class="zone-badges"><span class="badge badge-acte">Acte 1</span><span class="badge badge-hub">Hub</span></div><div class="zone-desc" data-editable>Point de départ de Kairo. Marché des Marchands de Fer. Quartier général de l'Ordre d'Aethar.</div></div>
+    <div class="zone-card zone-mines"><span class="zone-num">02</span><span class="zone-icon">❄</span><div class="zone-name" data-editable>MINES DE SEL DU NORD</div><div class="zone-type" data-editable>Labyrinthe glacial — Éclat 1</div><div class="zone-badges"><span class="badge badge-eclat">Éclat 1</span><span class="badge badge-boss">Boss : Golem de cristal</span></div><div class="zone-desc" data-editable>Mines abandonnées envahies de créatures de glace. L'Éclat a gelé les galeries du fond.</div></div>
+    <div class="zone-card zone-sylvara"><span class="zone-num">03</span><span class="zone-icon">🌲</span><div class="zone-name" data-editable>FORÊT DE SYLVARA</div><div class="zone-type" data-editable>Forêt corrompue — Éclat 2</div><div class="zone-badges"><span class="badge badge-eclat">Éclat 2</span><span class="badge badge-boss">Boss : Sylorn</span></div><div class="zone-desc" data-editable>Temple elfique envahi par l'ombre. Confrontation Sylorn/Lyra. Communion sylvestre active.</div></div>
+    <div class="zone-card zone-kharr"><span class="zone-num">04</span><span class="zone-icon">☀</span><div class="zone-name" data-editable>DÉSERT DE KHARR</div><div class="zone-type" data-editable>Tombeau sous le sable — Éclat 3</div><div class="zone-badges"><span class="badge badge-eclat">Éclat 3</span><span class="badge badge-boss">Boss : Gardien du tombeau</span></div><div class="zone-desc" data-editable>Terres d'Ariz. Tombeau antique enfoui sous les dunes. Instinct du désert actif pour Ariz.</div></div>
+    <div class="zone-card zone-dernath"><span class="zone-num">05</span><span class="zone-icon">⚡</span><div class="zone-name" data-editable>FALAISES DE DERNATH</div><div class="zone-type" data-editable>Côtes battues — Éclat 4</div><div class="zone-badges"><span class="badge badge-eclat">Éclat 4</span><span class="badge badge-boss">Boss : Phare hanté</span></div><div class="zone-desc" data-editable>Tempêtes permanentes. Phare abandonné hanté par un spectre lié à l'Éclat.</div></div>
+    <div class="zone-card zone-tour"><span class="zone-num">06</span><span class="zone-icon">🗼</span><div class="zone-name" data-editable>TOUR D'AETHAR</div><div class="zone-type" data-editable>Centre géographique — Boss final</div><div class="zone-badges"><span class="badge badge-acte">Acte 3</span><span class="badge badge-boss">Boss : Serafyne / Entité</span></div><div class="zone-desc" data-editable>Tour au centre d'Aethoria. Là où tout converge. Les 3 fins se jouent ici.</div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ SYSTÈME ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="systeme" data-section-id="systeme" style="background:linear-gradient(135deg,rgba(15,22,40,.9),rgba(22,15,40,.9))">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">SYSTÈME DE JEU</h2>
+  <div class="systeme-grid">
+    <div class="sys-block" style="border:3px solid var(--shadow2)">
+      <div class="sys-block-title" style="color:var(--shadow3)">⚫ JAUGE D'OMBRE</div>
+      <div class="ombre-bar"><div class="ombre-seg-n"></div><div class="ombre-seg-i"></div><div class="ombre-seg-c"></div></div>
+      <div class="ombre-levels">
+        <div class="ombre-lvl ombre-n"><span class="ombre-pct">0 – 49%</span><span class="ombre-name">NORMAL</span><span class="ombre-desc" data-editable>Aucun effet négatif</span></div>
+        <div class="ombre-lvl ombre-i"><span class="ombre-pct">50 – 99%</span><span class="ombre-name">INSTABLE</span><span class="ombre-desc" data-editable>Sorts coûtent +10% PL</span></div>
+        <div class="ombre-lvl ombre-c"><span class="ombre-pct">100%</span><span class="ombre-name">CORROMPU</span><span class="ombre-desc" data-editable>3 tours — attaques risquent de toucher les alliés. Fin : jauge = 0, récupère 50% PL max.</span></div>
+      </div>
+    </div>
+    <div class="sys-block" style="border:3px solid var(--gold-dim)">
+      <div class="sys-block-title" style="color:var(--gold)">✦ ÉCOLES DE MAGIE</div>
+      <div class="magie-mini-grid">
+        <div class="magie-card-mini mc-sol"><span class="mc-name">LUMIÈRE SOLAIRE</span><span class="mc-desc" data-editable>Offensif. Efficace vs ombres. Exclusif aux porteurs de marque.</span></div>
+        <div class="magie-card-mini mc-ter"><span class="mc-name">MAGIE DE TERRE</span><span class="mc-desc" data-editable>Soins, boucliers, ralentissement. Spécialité de Lyra. Peu coûteuse.</span></div>
+        <div class="magie-card-mini mc-omb"><span class="mc-name">MAGIE D'OMBRE</span><span class="mc-desc" data-editable>Très puissante mais corruptrice. Chaque utilisation remplit la Jauge.</span></div>
+        <div class="magie-card-mini mc-ecl"><span class="mc-name">MAGIE DES ÉCLATS</span><span class="mc-desc" data-editable>Exclusive porteurs de marque. Aurore Brisée débloquée à l'éclat 4.</span></div>
+      </div>
+    </div>
+    <div class="sys-block" style="border:3px solid var(--steel);grid-column:1/-1">
+      <div class="sys-block-title" style="color:var(--steel2)">⚔ ACTIONS DE COMBAT</div>
+      <div class="combat-grid">
+        <div class="combat-action"><span class="ca-icon">⚔</span><span class="ca-name">ATTAQUE</span><span class="ca-desc" data-editable>Frappe physique. Dégâts = Force + arme. Disponible pour tous.</span></div>
+        <div class="combat-action"><span class="ca-icon">✦</span><span class="ca-name">MAGIE (PL)</span><span class="ca-desc" data-editable>Sorts. Remplit la Jauge d'Ombre pour Kairo et Serafyne.</span></div>
+        <div class="combat-action"><span class="ca-icon">⚡</span><span class="ca-name">COMPÉTENCE (PC)</span><span class="ca-desc" data-editable>Aptitudes spéciales d'Ariz et Gork. Aucun risque de corruption.</span></div>
+        <div class="combat-action"><span class="ca-icon">🧪</span><span class="ca-name">OBJET</span><span class="ca-desc" data-editable>Consommable de l'inventaire. Ne coûte pas de ressource.</span></div>
+        <div class="combat-action"><span class="ca-icon">🛡</span><span class="ca-name">DÉFENSE</span><span class="ca-desc" data-editable>Réduit les dégâts reçus ce tour. Peut protéger un allié adjacent.</span></div>
+        <div class="combat-action"><span class="ca-icon">⏭</span><span class="ca-name">PASSE</span><span class="ca-desc" data-editable>Ne fait rien. Utile pour gérer la Jauge d'Ombre.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ UNITY TRACKER ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="unity" data-section-id="unity">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">UNITY TRACKER</h2>
+  <div class="tracker-filters">
+    <button class="filter-btn active" onclick="filterTracker('all',this)">TOUT</button>
+    <button class="filter-btn" onclick="filterTracker('todo',this)">À FAIRE</button>
+    <button class="filter-btn" onclick="filterTracker('wip',this)">EN COURS</button>
+    <button class="filter-btn" onclick="filterTracker('done',this)">FAIT</button>
+    <button class="filter-btn" onclick="filterTracker('blocked',this)">BLOQUÉ</button>
+  </div>
+  <table class="tracker-table" id="tracker-table">
+    <thead>
+      <tr>
+        <th>MODULE</th>
+        <th>CATÉGORIE</th>
+        <th>STATUT</th>
+        <th>FICHIER</th>
+        <th>NOTES</th>
+        <th class="edit-ctrl"></th>
+      </tr>
+    </thead>
+    <tbody id="tracker-body">
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>GameManager</div></td><td><span class="cat-badge" data-editable>Core</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Core/</div></td><td><div class="tracker-notes" data-editable>Singleton. Gère les états globaux du jeu.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>SceneLoader</div></td><td><span class="cat-badge" data-editable>Core</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Core/</div></td><td><div class="tracker-notes" data-editable>Chargement async des scènes avec transitions.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>CombatManager</div></td><td><span class="cat-badge" data-editable>Combat</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Combat/</div></td><td><div class="tracker-notes" data-editable>Orchestre le déroulement d'un combat complet.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>TurnSystem</div></td><td><span class="cat-badge" data-editable>Combat</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Combat/</div></td><td><div class="tracker-notes" data-editable>Tri par Agilité décroissante. Égalité = alliés prioritaires.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>CharacterStats</div></td><td><span class="cat-badge" data-editable>Data</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Characters/</div></td><td><div class="tracker-notes" data-editable>ScriptableObject par perso. PV, Force, Magie, Agi, Def, PL/PC.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>ShadowGaugeSystem</div></td><td><span class="cat-badge" data-editable>Combat</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Combat/</div></td><td><div class="tracker-notes" data-editable>Jauge d'Ombre : Normal/Instable/Corrompu. canBeCorrupted flag.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>SpellSystem</div></td><td><span class="cat-badge" data-editable>Combat</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Combat/</div></td><td><div class="tracker-notes" data-editable>Sorts PL. Coûts, effets, remplissage Jauge d'Ombre.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>SkillSystem</div></td><td><span class="cat-badge" data-editable>Combat</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Combat/</div></td><td><div class="tracker-notes" data-editable>Compétences PC (Ariz, Gork). Pas de jauge d'ombre.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>InventorySystem</div></td><td><span class="cat-badge" data-editable>Gameplay</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Inventory/</div></td><td><div class="tracker-notes" data-editable>Potions, équipements, améliorations marteau par éclat.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>DialogueSystem</div></td><td><span class="cat-badge" data-editable>Narrative</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Dialogue/</div></td><td><div class="tracker-notes" data-editable>Arbre de dialogue, choix multiples, fins conditionnelles.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>SaveSystem</div></td><td><span class="cat-badge" data-editable>Core</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Core/</div></td><td><div class="tracker-notes" data-editable>Serialization JSON. Points de sauvegarde. Retour sur KO.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>UIManager</div></td><td><span class="cat-badge" data-editable>UI</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/UI/</div></td><td><div class="tracker-notes" data-editable>Barres PV, Jauge d'Ombre, menu combat, HUD exploration.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+      <tr data-status="todo"><td><div class="tracker-module" data-editable>MapController</div></td><td><span class="cat-badge" data-editable>Gameplay</span></td><td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td><td><div class="tracker-file" data-editable>Assets/Scripts/Map/</div></td><td><div class="tracker-notes" data-editable>Navigation entre les 6 zones. Déclencheurs de combat aléatoire.</div></td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+    </tbody>
+  </table>
+  <button class="add-item-btn edit-ctrl" onclick="addTrackerRow()">+ Ajouter un module</button>
+</section>
+
+<!-- ═══════════════════════════════════════ JOURNAL ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="journal" data-section-id="journal" style="background:rgba(10,14,26,.7)">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">JOURNAL DE DÉVELOPPEMENT</h2>
+  <button class="journal-add-btn" onclick="addJournalEntry()">+ Nouvelle entrée</button>
+  <div class="journal-timeline" id="journal-timeline">
+    <div class="journal-entry">
+      <div class="journal-left"><span class="journal-date">2026-04-14</span></div>
+      <div class="journal-dot"></div>
+      <div class="journal-right">
+        <div class="journal-tags"><span class="jtag jtag-lore">LORE<button class="del-tag-btn" onclick="this.closest('.jtag').remove();scheduleSave()">×</button></span><span class="jtag jtag-sys">SYSTÈME<button class="del-tag-btn" onclick="this.closest('.jtag').remove();scheduleSave()">×</button></span><button class="add-tag-btn" onclick="addJournalTag(this.closest('.journal-tags'))">+ Tag</button></div>
+        <div class="journal-title" data-editable>Initialisation du projet</div>
+        <div class="journal-content" data-editable>Bible complète finalisée. 6 personnages ficheés, système de combat défini, Jauge d'Ombre v2 validée. Sprites × 6 validés. Dev Dashboard v2 créé. Prochaine étape : Unity.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ ACTES ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="actes" data-section-id="actes" style="background:linear-gradient(135deg,rgba(15,22,40,.9),rgba(22,15,40,.9))">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">STRUCTURE DES ACTES</h2>
+  <div class="actes-list">
+
+    <div class="acte-card">
+      <div class="acte-header" onclick="toggleActe('acte1')">
+        <span class="acte-num">01</span>
+        <span class="acte-title" data-editable>ACTE 1 — L'ÉVEIL</span>
+        <span class="acte-status as-todo" data-editable>À FAIRE</span>
+        <button class="acte-toggle" id="toggle-acte1">▼</button>
+      </div>
+      <div class="acte-body" id="body-acte1">
+        <div class="acte-desc" data-editable>Valdris en flammes. Kairo découvre sa marque. Il rencontre Oryn et rejoint l'Ordre. Premier donjon : les Mines de Sel. Premier boss : le Golem de cristal. Éclat 1 récupéré.</div>
+        <div class="scenes-list" id="scenes-acte1">
+          <div class="scene-item"><span class="scene-type-badge stype-cutscene">CUTSCENE</span><span class="scene-name" data-editable>Valdris attaquée — Kairo fuit avec L'Enclume</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-dialogue">DIALOGUE</span><span class="scene-name" data-editable>Rencontre Oryn — révélation de la marque</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-exploration">EXPLORE</span><span class="scene-name" data-editable>Mines de Sel du Nord — labyrinthe glacial</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-combat">COMBAT</span><span class="scene-name" data-editable>Boss : Golem de cristal (Éclat 1)</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-cutscene">CUTSCENE</span><span class="scene-name" data-editable>Oryn se retire — Kairo continue seul vers l'Acte 2</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+        </div>
+        <button class="add-scene-btn edit-ctrl" onclick="addScene('scenes-acte1')">+ Ajouter une scène</button>
+      </div>
+    </div>
+
+    <div class="acte-card">
+      <div class="acte-header" onclick="toggleActe('acte2')">
+        <span class="acte-num">02</span>
+        <span class="acte-title" data-editable>ACTE 2 — LES ÉCLATS</span>
+        <span class="acte-status as-todo" data-editable>À FAIRE</span>
+        <button class="acte-toggle" id="toggle-acte2">▼</button>
+      </div>
+      <div class="acte-body" id="body-acte2">
+        <div class="acte-desc" data-editable>3 donjons et 3 éclats. Recrutement de Lyra (Sylvara), Ariz (Kharr), Gork (Dernath). Confrontation Lyra/Sylorn. Première apparition directe de Serafyne. Révélation progressive de la vérité sur les Aethars.</div>
+        <div class="scenes-list" id="scenes-acte2">
+          <div class="scene-item"><span class="scene-type-badge stype-exploration">EXPLORE</span><span class="scene-name" data-editable>Forêt de Sylvara — recrutement Lyra</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-dialogue">DIALOGUE</span><span class="scene-name" data-editable>Confrontation Sylorn / Lyra — choix de Kairo</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-combat">COMBAT</span><span class="scene-name" data-editable>Boss temple Sylvara (Éclat 2)</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-exploration">EXPLORE</span><span class="scene-name" data-editable>Désert de Kharr — recrutement Ariz</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-combat">COMBAT</span><span class="scene-name" data-editable>Boss tombeau Kharr (Éclat 3)</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-exploration">EXPLORE</span><span class="scene-name" data-editable>Falaises de Dernath — recrutement Gork</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-combat">COMBAT</span><span class="scene-name" data-editable>Boss phare Dernath (Éclat 4)</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-dialogue">DIALOGUE</span><span class="scene-name" data-editable>Serafyne révèle la vérité sur les Aethars EN combat</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+        </div>
+        <button class="add-scene-btn edit-ctrl" onclick="addScene('scenes-acte2')">+ Ajouter une scène</button>
+      </div>
+    </div>
+
+    <div class="acte-card">
+      <div class="acte-header" onclick="toggleActe('acte3')">
+        <span class="acte-num">03</span>
+        <span class="acte-title" data-editable>ACTE 3 — LA TOUR D'AETHAR</span>
+        <span class="acte-status as-todo" data-editable>À FAIRE</span>
+        <button class="acte-toggle" id="toggle-acte3">▼</button>
+      </div>
+      <div class="acte-body" id="body-acte3">
+        <div class="acte-desc" data-editable>Tour d'Aethar. L'entité prend le contrôle partiel de Serafyne. Kairo doit choisir son camp. 3 fins possibles selon les choix accumulés.</div>
+        <div class="scenes-list" id="scenes-acte3">
+          <div class="scene-item"><span class="scene-type-badge stype-exploration">EXPLORE</span><span class="scene-name" data-editable>Ascension de la Tour — gauntlet de combats</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-combat">COMBAT</span><span class="scene-name" data-editable>Phase 2 Serafyne — révélations finales</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-dialogue">DIALOGUE</span><span class="scene-name" data-editable>Le Choix — Réunifier / Rituel commun / Détruire</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-combat">COMBAT</span><span class="scene-name" data-editable>Phase 3 Serafyne — entité partiellement contrôle</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+          <div class="scene-item"><span class="scene-type-badge stype-cutscene">CUTSCENE</span><span class="scene-name" data-editable>Épilogue selon la fin choisie (3 variantes)</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></div>
+        </div>
+        <button class="add-scene-btn edit-ctrl" onclick="addScene('scenes-acte3')">+ Ajouter une scène</button>
+      </div>
+    </div>
+
+  </div>
+  <button class="add-item-btn edit-ctrl" onclick="addActe()" style="margin-top:16px">+ Ajouter un acte</button>
+</section>
+
+<!-- ═══════════════════════════════════════ FINS ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="fins" data-section-id="fins" style="background:rgba(10,14,26,.8)">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">ARBRE DES FINS</h2>
+  <div class="fins-grid">
+    <div class="fin-card fin-sacrifice"><span class="fin-num">1</span><div class="fin-title" data-editable>LE SACRIFICE</div><span class="fin-condition" data-editable>Kairo réunifie le Cœur seul</span><div class="fin-desc" data-editable>La marque le détruit au moment de la réunification. Il meurt en sachant pourquoi il le faisait. Kairo avait raison d'essayer. Le monde est sauvé. Le porteur ne l'est pas.</div></div>
+    <div class="fin-card fin-troisieme"><span class="fin-num">2</span><div class="fin-title" data-editable>LA TROISIÈME VOIE</div><span class="fin-condition" data-editable>Kairo + Oryn accomplissent le rituel ensemble</span><div class="fin-desc" data-editable>Marque gauche (Oryn) + marque droite (Kairo) réunies. Le coût est divisé entre eux. Les deux meurent. Oryn a enfin avoué la vérité à Kairo. Ils affrontent leur destin ensemble.</div></div>
+    <div class="fin-card fin-rupture"><span class="fin-num">3</span><div class="fin-title" data-editable>LA RUPTURE</div><span class="fin-condition" data-editable>Kairo détruit le Cœur avec Serafyne</span><div class="fin-desc" data-editable>Serafyne avait raison. Destruction = décharge colossale. Zones dévastées, milliers de morts. L'entité est affaiblie mais pas morte. Kairo survit. À quel prix ?</div></div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ AVANCEMENT ═══════════════════════════════════════ -->
+<section class="page-section section-wrapper" id="avancement" data-section-id="avancement" style="background:linear-gradient(135deg,rgba(10,14,26,.95),rgba(15,22,40,.95))">
+  <div class="section-controls"><button onclick="renameSection(this)">✎ Renommer</button></div>
+  <h2 class="section-title">AVANCEMENT</h2>
+  <div class="avan-cols">
+    <div class="avan-col avan-col-done">
+      <div class="avan-col-title">✓ TERMINÉ</div>
+      <div id="list-done">
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Bible monde &amp; lore (zones, factions, 3 âges, système magie)</span></div>
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Fiches complètes : Kairo, Oryn, Lyra, Ariz, Gork, Serafyne</span></div>
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Jauge d'Ombre v2 — règles officielles</span></div>
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Système de combat tour par tour défini</span></div>
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Stats calibrées (tous les personnages)</span></div>
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Sprites validés × 6 : Kairo P1, Lyra, Ariz, Gork, Oryn, Serafyne</span></div>
+        <div class="avan-item"><span class="avan-icon">✓</span><span data-editable>Site bible (v1) + Dev Dashboard (v2)</span></div>
+      </div>
+      <button class="add-item-btn edit-ctrl" onclick="addAvanItem('list-done','✓')">+ Ajouter</button>
+    </div>
+    <div class="avan-col avan-col-wip">
+      <div class="avan-col-title">⏳ EN ATTENTE</div>
+      <div id="list-wip">
+        <div class="avan-item"><span class="avan-icon">⏳</span><span data-editable>Sprites Kairo Phase 2 &amp; 3 (à générer dans Pixel Lab)</span></div>
+        <div class="avan-item"><span class="avan-icon">⏳</span><span data-editable>Structure Unity (création du projet)</span></div>
+      </div>
+      <button class="add-item-btn edit-ctrl" onclick="addAvanItem('list-wip','⏳')">+ Ajouter</button>
+    </div>
+    <div class="avan-col avan-col-todo">
+      <div class="avan-col-title">✗ À FAIRE</div>
+      <div id="list-todo">
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Chapitre 3 — Acte 1 (Valdris, dialogues, donjon 1, boss 1)</span></div>
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Chapitre 4 — Acte 2 (4 donjons, 4 boss, révélations)</span></div>
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Chapitre 5 — Acte 3 (Tour d'Aethar, boss final, 3 fins)</span></div>
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Chapitre 6 — Guide Unity (structure, scènes, scripts C#)</span></div>
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Système inventaire (potions, améliorations marteau)</span></div>
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Système dialogues &amp; choix (arbre, fins multiples)</span></div>
+        <div class="avan-item"><span class="avan-icon">✗</span><span data-editable>Quêtes secondaires</span></div>
+      </div>
+      <button class="add-item-btn edit-ctrl" onclick="addAvanItem('list-todo','✗')">+ Ajouter</button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ CUSTOM SECTIONS ═══════════════════════════════════════ -->
+<div id="custom-sections-container" style="max-width:1400px;margin:0 auto;padding:0 24px"></div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-title">BROKEN SUNSHINE</div>
+  <div class="footer-sub">Dev Dashboard v3 · Firebase · Aethoria · Avril 2026</div>
+  <div style="margin-top:16px;display:flex;justify-content:center;gap:24px;font-size:20px;color:var(--gold-dim)">⚒ ✦ ⚔ ✦ 🛡</div>
+</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  BROKEN SUNSHINE — Dev Dashboard v3 · Firebase Firestore
+// ═══════════════════════════════════════════════════════════════
+
+// ─── FIREBASE CONFIG — REMPLACE PAR TES VALEURS ──────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyBL10tM74YuxDWMb04rOWVy9ez53FTiA3s",
+  authDomain: "broken-sunshine.firebaseapp.com",
+  projectId: "broken-sunshine",
+  storageBucket: "broken-sunshine.firebasestorage.app",
+  messagingSenderId: "995171659803",
+  appId: "1:995171659803:web:0f5b33465c2ab03802c8be",
+  measurementId: "G-0PRM2CXB5M"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db            = firebase.firestore();
+const DASHBOARD_DOC = db.collection('dashboard').doc('main');
+const USERS_DOC     = db.collection('auth').doc('users');
+
+let editMode = false;
+let saveTimer = null;
+
+// ─── INIT ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  checkSession();
+});
+
+// ─── EDIT MODE ───────────────────────────────────────────────
+function toggleEdit() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  const btn = document.getElementById('edit-toggle');
+  if (editMode) {
+    btn.textContent = '✓ TERMINER';
+    document.querySelectorAll('[data-editable]').forEach(el => {
+      el.contentEditable = 'true';
+      el.addEventListener('input', scheduleSave);
+    });
+    showToast('MODE ÉDITION ACTIVÉ');
+  } else {
+    btn.textContent = '✎ ÉDITER';
+    document.querySelectorAll('[contenteditable]').forEach(el => {
+      el.contentEditable = 'false';
+      el.removeEventListener('input', scheduleSave);
+    });
+    saveAll();
+    showToast('SAUVEGARDÉ ✓');
+  }
+}
+
+// ─── SAVE / LOAD (Firebase) ───────────────────────────────────
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveAll, 800);
+}
+
+async function saveAll() {
+  const data = {};
+  document.querySelectorAll('[data-section-id]').forEach(section => {
+    const id = section.dataset.sectionId;
+    const clone = section.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    data[id] = clone.innerHTML;
+  });
+  const pct = parseInt(document.getElementById('progress-display').textContent) || 15;
+  data.progress = pct;
+  data.lastUpdated = new Date().toISOString().split('T')[0];
+  data.customSections = serializeCustomSections();
+  data.trackerStatuses = serializeTrackerStatuses();
+  data.checkedScenes = serializeCheckedScenes();
+  data.checkboxes = serializeCheckboxStates();
+  try {
+    await DASHBOARD_DOC.set(data);
+    updateLastUpdated();
+    showToast('SAUVEGARDÉ ✓');
+  } catch(e) {
+    showToast('ERREUR FIREBASE — voir console');
+    console.error(e);
+  }
+}
+
+async function loadData() {
+  try {
+    const snap = await DASHBOARD_DOC.get();
+    const data = snap.exists ? snap.data() : {};
+    if (!data || Object.keys(data).length === 0) { updateProgressDisplay(15); return; }
+    document.querySelectorAll('[data-section-id]').forEach(section => {
+      const id = section.dataset.sectionId;
+      if (data[id]) { section.innerHTML = data[id]; reattachEvents(section); }
+    });
+    updateProgressDisplay(data.progress || 15);
+    if (data.lastUpdated) document.getElementById('last-updated-display').textContent = data.lastUpdated;
+    if (data.trackerStatuses) restoreTrackerStatuses(data.trackerStatuses);
+    if (data.checkedScenes)   restoreCheckedScenes(data.checkedScenes);
+    if (data.checkboxes)      restoreCheckboxStates(data.checkboxes);
+    if (data.customSections)  data.customSections.forEach(cs => renderCustomSection(cs));
+  } catch(e) {
+    showToast('ERREUR CHARGEMENT FIREBASE');
+    console.error(e);
+    updateProgressDisplay(15);
+  }
+}
+
+function reattachEvents(section) {
+  section.querySelectorAll('.status-pill').forEach(p => p.onclick = function(){ cycleStatus(this); });
+  section.querySelectorAll('.scene-check').forEach(c => c.onclick = function(){ toggleCheck(this); });
+  section.querySelectorAll('.cs-checkbox').forEach(c => c.onclick = function(){ toggleCheckbox(this); });
+}
+
+function updateProgressDisplay(pct) {
+  if (pct === undefined) pct = parseInt(document.getElementById('progress-display').textContent) || 15;
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('progress-display').textContent = pct + '%';
+}
+
+function updateLastUpdated() {
+  const d = new Date().toISOString().split('T')[0];
+  document.getElementById('last-updated-display').textContent = d;
+}
+
+// ─── EXPORT / IMPORT / RESET ──────────────────────────────────
+async function exportData() {
+  try {
+    const snap = await DASHBOARD_DOC.get();
+    const data = snap.exists ? snap.data() : {};
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: 'broken-sunshine-' + new Date().toISOString().split('T')[0] + '.json'
+    });
+    a.click();
+    showToast('EXPORT OK ✓');
+  } catch(e) { showToast('ERREUR EXPORT'); console.error(e); }
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      await DASHBOARD_DOC.set(data);
+      showToast('IMPORT OK — RECHARGEMENT...');
+      setTimeout(() => location.reload(), 1200);
+    } catch(err) { showToast('ERREUR JSON'); console.error(err); }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+async function resetData() {
+  if (!confirm('Remettre le dashboard à zéro ? Toutes les modifications seront perdues.')) return;
+  try {
+    await DASHBOARD_DOC.delete();
+    location.reload();
+  } catch(e) { showToast('ERREUR RESET'); console.error(e); }
+}
+
+function saveToFile() {
+  showToast('💾 En v3, les données sont dans Firebase. Utilise EXPORT JSON.');
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── PROGRESS BAR (clic sur le % pour modifier) ───────────────
+document.addEventListener('click', e => {
+  if (!editMode) return;
+  if (e.target.id === 'progress-display') {
+    const val = prompt('Avancement global (0-100) :', parseInt(e.target.textContent));
+    const n = Math.min(100, Math.max(0, parseInt(val)));
+    if (!isNaN(n)) { updateProgressDisplay(n); scheduleSave(); }
+  }
+});
+
+// ─── CHARACTER SHEETS ─────────────────────────────────────────
+function toggleChar(id) {
+  const full = document.getElementById('char-full-' + id);
+  const btn  = document.getElementById('btn-' + id);
+  if (!full) return;
+  const open = full.classList.toggle('open');
+  if (btn) btn.classList.toggle('open', open);
+}
+
+// ─── ACTES ───────────────────────────────────────────────────
+function toggleActe(id) {
+  const body   = document.getElementById('body-' + id);
+  const toggle = document.getElementById('toggle-' + id);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  if (toggle) toggle.classList.toggle('open', open);
+}
+
+// ─── SCENE CHECK ─────────────────────────────────────────────
+function toggleCheck(el) {
+  const done = el.classList.toggle('done');
+  el.textContent = done ? '✓' : '';
+  scheduleSave();
+}
+
+// ─── UNITY TRACKER ───────────────────────────────────────────
+const STATUS_CYCLE  = ['s-todo','s-wip','s-done','s-blocked'];
+const STATUS_LABELS = { 's-todo':'À FAIRE','s-wip':'EN COURS','s-done':'FAIT','s-blocked':'BLOQUÉ' };
+
+function cycleStatus(el) {
+  if (!editMode) return;
+  const cur  = STATUS_CYCLE.find(s => el.classList.contains(s)) || 's-todo';
+  const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(cur) + 1) % STATUS_CYCLE.length];
+  el.className = 'status-pill ' + next;
+  el.textContent = STATUS_LABELS[next];
+  const row = el.closest('tr');
+  if (row) row.dataset.status = next.replace('s-','');
+  scheduleSave();
+}
+
+function filterTracker(filter, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#tracker-body tr').forEach(row => {
+    row.style.display = (filter === 'all' || (row.dataset.status || 'todo') === filter) ? '' : 'none';
+  });
+}
+
+function addTrackerRow() {
+  const tbody = document.getElementById('tracker-body');
+  const tr = document.createElement('tr');
+  tr.dataset.status = 'todo';
+  tr.innerHTML = `
+    <td><div class="tracker-module" contenteditable="true">Nouveau module</div></td>
+    <td><span class="cat-badge" contenteditable="true">Core</span></td>
+    <td><span class="status-pill s-todo" onclick="cycleStatus(this)">À FAIRE</span></td>
+    <td><div class="tracker-file" contenteditable="true">Assets/Scripts/</div></td>
+    <td><div class="tracker-notes" contenteditable="true">Description...</div></td>
+    <td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td>`;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  scheduleSave();
+}
+
+function serializeTrackerStatuses() {
+  const s = {};
+  document.querySelectorAll('#tracker-body tr').forEach((row, i) => {
+    const p = row.querySelector('.status-pill');
+    if (p) s[i] = STATUS_CYCLE.find(c => p.classList.contains(c)) || 's-todo';
+  });
+  return s;
+}
+
+function restoreTrackerStatuses(s) {
+  document.querySelectorAll('#tracker-body tr').forEach((row, i) => {
+    const p = row.querySelector('.status-pill');
+    if (p && s[i]) {
+      p.className = 'status-pill ' + s[i];
+      p.textContent = STATUS_LABELS[s[i]];
+      row.dataset.status = s[i].replace('s-','');
+    }
+  });
+}
+
+// ─── JOURNAL ─────────────────────────────────────────────────
+function addJournalEntry() {
+  const tl = document.getElementById('journal-timeline');
+  const div = document.createElement('div');
+  div.className = 'journal-entry';
+  const today = new Date().toISOString().split('T')[0];
+  div.innerHTML = `
+    <div class="journal-left"><span class="journal-date" contenteditable="${editMode}">${today}</span></div>
+    <div class="journal-dot"></div>
+    <div class="journal-right">
+      <div class="journal-tags">
+        <span class="jtag jtag-sys">SYS<button class="del-tag-btn" onclick="this.closest('.jtag').remove();scheduleSave()">×</button></span>
+        <button class="add-tag-btn" onclick="addJournalTag(this.closest('.journal-tags'))">+ Tag</button>
+        <button class="del-item-btn edit-ctrl" onclick="this.closest('.journal-entry').remove();scheduleSave()">× Suppr.</button>
+      </div>
+      <div class="journal-title" contenteditable="${editMode}" data-editable>Nouvelle entrée</div>
+      <div class="journal-content" contenteditable="${editMode}" data-editable>Décris ici ce qui a été fait...</div>
+    </div>`;
+  tl.insertBefore(div, tl.firstChild);
+  div.querySelectorAll('[contenteditable="true"]').forEach(el => el.addEventListener('input', scheduleSave));
+  div.querySelector('.journal-title')?.focus();
+  scheduleSave();
+}
+
+// ─── JOURNAL TAGS ────────────────────────────────────────────
+function addJournalTag(tagsEl) {
+  const name = prompt('Nom du tag (ex: Lukas, Design, Bug...) :');
+  if (!name || !name.trim()) return;
+  const tag = document.createElement('span');
+  tag.className = 'jtag jtag-custom';
+  tag.innerHTML = name.trim() + `<button class="del-tag-btn" onclick="this.closest('.jtag').remove();scheduleSave()">×</button>`;
+  // Insérer avant le bouton "+ Tag"
+  tagsEl.insertBefore(tag, tagsEl.querySelector('.add-tag-btn'));
+  scheduleSave();
+}
+
+// ─── SCÈNES ──────────────────────────────────────────────────
+function serializeCheckedScenes() {
+  const s = {};
+  document.querySelectorAll('.scene-check').forEach((el, i) => s[i] = el.classList.contains('done'));
+  return s;
+}
+
+function restoreCheckedScenes(s) {
+  document.querySelectorAll('.scene-check').forEach((el, i) => {
+    if (s[i]) { el.classList.add('done'); el.textContent = '✓'; }
+  });
+}
+
+function addScene(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const div = document.createElement('div');
+  div.className = 'scene-item';
+  div.innerHTML = `<span class="scene-type-badge stype-dialogue" contenteditable="true">TYPE</span><span class="scene-name" contenteditable="true" data-editable>Nouvelle scène...</span><div class="scene-check" onclick="toggleCheck(this)"></div><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button>`;
+  list.appendChild(div);
+  div.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  div.querySelector('[contenteditable]').focus();
+  scheduleSave();
+}
+
+function addActe() {
+  const list = document.querySelector('.actes-list');
+  const num  = list.querySelectorAll('.acte-card').length + 1;
+  const id   = 'acte' + num;
+  const div  = document.createElement('div');
+  div.className = 'acte-card';
+  div.innerHTML = `
+    <div class="acte-header" onclick="toggleActe('${id}')">
+      <span class="acte-num">0${num}</span>
+      <span class="acte-title" contenteditable="true" data-editable>ACTE ${num} — TITRE</span>
+      <span class="acte-status as-todo" contenteditable="true" data-editable>À FAIRE</span>
+      <button class="del-item-btn edit-ctrl" onclick="this.closest('.acte-card').remove();scheduleSave()" style="margin-left:auto">× Suppr.</button>
+      <button class="acte-toggle" id="toggle-${id}">▼</button>
+    </div>
+    <div class="acte-body" id="body-${id}">
+      <div class="acte-desc" contenteditable="true" data-editable>Description de l'acte...</div>
+      <div class="scenes-list" id="scenes-${id}"></div>
+      <button class="add-scene-btn edit-ctrl" onclick="addScene('scenes-${id}')">+ Ajouter une scène</button>
+    </div>`;
+  list.appendChild(div);
+  div.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  scheduleSave();
+}
+
+// ─── AVANCEMENT LISTS ────────────────────────────────────────
+function addAvanItem(listId, icon) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const div = document.createElement('div');
+  div.className = 'avan-item';
+  div.innerHTML = `<span class="avan-icon">${icon}</span><span contenteditable="true" data-editable>Nouvel élément...</span><button class="del-item-btn edit-ctrl" onclick="this.closest('.avan-item').remove();scheduleSave()">×</button>`;
+  list.appendChild(div);
+  const span = div.querySelector('[contenteditable]');
+  span.addEventListener('input', scheduleSave);
+  span.focus();
+  scheduleSave();
+}
+
+// ─── TABLE / LIST ROWS ───────────────────────────────────────
+function delRow(btn) {
+  const row = btn.closest('tr') || btn.closest('.scene-item') || btn.closest('.journal-entry') || btn.closest('.avan-item') || btn.closest('li');
+  if (row) { row.remove(); scheduleSave(); }
+}
+
+function addSortRow(tableId) {
+  const tbody = document.querySelector('#' + tableId + ' tbody');
+  if (!tbody) return;
+  const cols = tbody.closest('table').querySelectorAll('thead th').length;
+  const tr   = document.createElement('tr');
+  let cells  = '';
+  for (let i = 0; i < cols - 1; i++) {
+    const cls = i === 1 ? ' class="sort-cost-cell"' : i === 3 ? ' class="sort-ombre-cell"' : '';
+    cells += `<td${cls} contenteditable="true" data-editable>—</td>`;
+  }
+  tr.innerHTML = cells + `<td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td>`;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  scheduleSave();
+}
+
+function addTechCard() {
+  const grid = document.getElementById('tech-grid');
+  const div  = document.createElement('div');
+  div.className = 'tech-card';
+  div.innerHTML = `<span class="tech-icon" contenteditable="true">📌</span><span class="tech-label" contenteditable="true">LABEL</span><span class="tech-value" contenteditable="true" data-editable>Valeur...</span><button class="del-item-btn edit-ctrl" onclick="this.closest('.tech-card').remove();scheduleSave()" style="display:block;margin-top:8px">× Suppr.</button>`;
+  grid.appendChild(div);
+  div.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  scheduleSave();
+}
+
+// ─── SECTION RENAME ──────────────────────────────────────────
+function renameSection(btn) {
+  const titleEl = btn.closest('.section-wrapper').querySelector('.section-title');
+  if (!titleEl) return;
+  const text = titleEl.textContent.trim();
+  const newName = prompt('Renommer la section :', text);
+  if (newName && newName.trim()) {
+    // Préserver le structure en remplaçant uniquement le nœud texte
+    for (const node of titleEl.childNodes) {
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) {
+        node.textContent = newName.trim();
+        break;
+      }
+    }
+    scheduleSave();
+  }
+}
+
+// ─── CUSTOM SECTIONS ─────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('add-modal').classList.add('open');
+  setTimeout(() => document.getElementById('new-section-title').focus(), 50);
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.remove('open');
+  document.getElementById('new-section-title').value = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeAddModal();
+});
+document.getElementById('add-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('add-modal')) closeAddModal();
+});
+
+function createSection() {
+  const title = document.getElementById('new-section-title').value.trim();
+  const type  = document.getElementById('new-section-type').value;
+  if (!title) { document.getElementById('new-section-title').focus(); return; }
+  const id = 'cs-' + Date.now();
+  renderCustomSection({ id, title, type, content: [] });
+  closeAddModal();
+  scheduleSave();
+  setTimeout(() => document.getElementById('wrap-' + id)?.scrollIntoView({ behavior: 'smooth' }), 100);
+}
+
+function renderCustomSection(cs) {
+  const container = document.getElementById('custom-sections-container');
+  const wrapper   = document.createElement('div');
+  wrapper.id = 'wrap-' + cs.id;
+  wrapper.innerHTML = `
+    <div class="section-wrapper" style="max-width:1400px;margin:0 auto;padding:40px 24px;position:relative;z-index:1">
+      <div class="section-controls">
+        <button onclick="renameCustomSection('${cs.id}')">✎ Renommer</button>
+        <button class="del-section-btn" onclick="deleteCustomSection('${cs.id}')">✕ Supprimer</button>
+      </div>
+      <h2 class="section-title" id="cs-title-${cs.id}">${cs.title}</h2>
+      <div class="custom-section-wrap" id="cs-body-${cs.id}">${cs.snapshot || buildCustomContent(cs)}</div>
+    </div>`;
+  container.appendChild(wrapper);
+  reattachCustomEvents(cs.id);
+}
+
+function buildCustomContent(cs) {
+  switch(cs.type) {
+    case 'notes':
+      return `<div class="cs-free-text" data-editable>Écris tes notes ici...</div>`;
+    case 'checklist':
+      return `<ul class="cs-checklist" id="csl-${cs.id}">
+        <li class="cs-check-item"><div class="cs-checkbox" onclick="toggleCheckbox(this)"></div><span class="cs-check-label" data-editable>Élément 1</span><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></li>
+        <li class="cs-check-item"><div class="cs-checkbox" onclick="toggleCheckbox(this)"></div><span class="cs-check-label" data-editable>Élément 2</span><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button></li>
+      </ul>
+      <button class="add-item-btn edit-ctrl" onclick="addCheckItem('csl-${cs.id}')">+ Ajouter un élément</button>`;
+    case 'table':
+      return `<table class="cs-table">
+        <thead><tr><th>CLÉ</th><th>VALEUR</th><th class="edit-ctrl"></th></tr></thead>
+        <tbody id="cst-${cs.id}">
+          <tr><td class="cs-table-key" data-editable>Clé 1</td><td class="cs-table-val" data-editable>Valeur 1</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+          <tr><td class="cs-table-key" data-editable>Clé 2</td><td class="cs-table-val" data-editable>Valeur 2</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td></tr>
+        </tbody>
+      </table>
+      <button class="add-item-btn edit-ctrl" onclick="addTableRow('cst-${cs.id}')">+ Ajouter une ligne</button>`;
+    case 'journal':
+      return `<button class="journal-add-btn edit-ctrl" onclick="addCustomJournalEntry('csj-${cs.id}')">+ Nouvelle entrée</button>
+        <div class="journal-timeline" id="csj-${cs.id}"></div>`;
+    default:
+      return `<div data-editable>Contenu...</div>`;
+  }
+}
+
+function reattachCustomEvents(id) {
+  const body = document.getElementById('cs-body-' + id);
+  if (!body) return;
+  body.querySelectorAll('.cs-checkbox').forEach(el => el.onclick = function(){ toggleCheckbox(this); });
+  if (editMode) {
+    body.querySelectorAll('[data-editable]').forEach(el => {
+      el.contentEditable = 'true';
+      el.addEventListener('input', scheduleSave);
+    });
+  }
+}
+
+function toggleCheckbox(el) {
+  const checked = el.classList.toggle('checked');
+  el.textContent = checked ? '✓' : '';
+  const item = el.closest('.cs-check-item');
+  if (item) item.classList.toggle('checked', checked);
+  scheduleSave();
+}
+
+function addCheckItem(listId) {
+  const list = document.getElementById(listId);
+  if (!list) return;
+  const li = document.createElement('li');
+  li.className = 'cs-check-item';
+  li.innerHTML = `<div class="cs-checkbox" onclick="toggleCheckbox(this)"></div><span class="cs-check-label" contenteditable="true" data-editable>Nouvel élément...</span><button class="del-item-btn edit-ctrl" onclick="delRow(this)">×</button>`;
+  list.appendChild(li);
+  const span = li.querySelector('[contenteditable]');
+  span.addEventListener('input', scheduleSave);
+  span.focus();
+  scheduleSave();
+}
+
+function addTableRow(tbodyId) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td class="cs-table-key" contenteditable="true" data-editable>Clé</td><td class="cs-table-val" contenteditable="true" data-editable>Valeur</td><td class="edit-ctrl"><button class="del-item-btn" onclick="delRow(this)">×</button></td>`;
+  tbody.appendChild(tr);
+  tr.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  scheduleSave();
+}
+
+function addCustomJournalEntry(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const today = new Date().toISOString().split('T')[0];
+  const div   = document.createElement('div');
+  div.className = 'journal-entry';
+  div.innerHTML = `
+    <div class="journal-left"><span class="journal-date" contenteditable="true">${today}</span></div>
+    <div class="journal-dot"></div>
+    <div class="journal-right">
+      <div class="journal-title" contenteditable="true" data-editable>Nouvelle entrée</div>
+      <div class="journal-content" contenteditable="true" data-editable>...</div>
+      <button class="del-item-btn edit-ctrl" onclick="this.closest('.journal-entry').remove();scheduleSave()">× Suppr.</button>
+    </div>`;
+  container.insertBefore(div, container.firstChild);
+  div.querySelectorAll('[contenteditable]').forEach(el => el.addEventListener('input', scheduleSave));
+  scheduleSave();
+}
+
+function serializeCustomSections() {
+  const sections = [];
+  document.querySelectorAll('#custom-sections-container [id^="wrap-"]').forEach(wrap => {
+    const id      = wrap.id.replace('wrap-','');
+    const titleEl = document.getElementById('cs-title-' + id);
+    const body    = document.getElementById('cs-body-' + id);
+    if (!titleEl || !body) return;
+    let type = 'notes';
+    if (body.querySelector('.cs-checklist')) type = 'checklist';
+    else if (body.querySelector('.cs-table'))   type = 'table';
+    else if (body.querySelector('.journal-timeline')) type = 'journal';
+    const clone = body.cloneNode(true);
+    clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+    sections.push({ id, title: titleEl.textContent.trim(), type, snapshot: clone.innerHTML });
+  });
+  return sections;
+}
+
+function serializeCheckboxStates() {
+  const s = {};
+  document.querySelectorAll('.cs-checkbox').forEach((el, i) => s[i] = el.classList.contains('checked'));
+  return s;
+}
+
+function restoreCheckboxStates(s) {
+  document.querySelectorAll('.cs-checkbox').forEach((el, i) => {
+    if (s[i]) { el.classList.add('checked'); el.textContent = '✓'; el.closest('.cs-check-item')?.classList.add('checked'); }
+  });
+}
+
+function renameCustomSection(id) {
+  const titleEl = document.getElementById('cs-title-' + id);
+  if (!titleEl) return;
+  const newName = prompt('Renommer la section :', titleEl.textContent.trim());
+  if (newName && newName.trim()) { titleEl.textContent = newName.trim(); scheduleSave(); }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUTHENTIFICATION (Firebase Firestore)
+// ═══════════════════════════════════════════════════════════════
+
+const SESSION_KEY = 'bs-session-v3';
+const SALT        = 'bs-aethoria-2026';
+
+// ─── HASH ────────────────────────────────────────────────────
+async function hashPassword(password) {
+  const data = new TextEncoder().encode(password + SALT);
+  const buf  = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// ─── USERS STORAGE (Firestore) ───────────────────────────────
+async function getUsers() {
+  try {
+    const snap = await USERS_DOC.get();
+    return snap.exists ? snap.data() : {};
+  } catch(e) { return {}; }
+}
+async function saveUsers(u) {
+  await USERS_DOC.set(u);
+}
+
+// ─── SESSION CHECK ───────────────────────────────────────────
+async function checkSession() {
+  // Créer l'admin par défaut si aucun utilisateur n'existe
+  const users = await getUsers();
+  if (Object.keys(users).length === 0) {
+    users['admin'] = await hashPassword('sunshine');
+    await saveUsers(users);
+  }
+  const stored = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY + '-remember');
+  if (stored && users[stored]) {
+    grantAccess(stored);
+  }
+}
+
+// ─── LOGIN ───────────────────────────────────────────────────
+async function loginSubmit() {
+  const username = document.getElementById('login-user').value.trim().toLowerCase();
+  const password = document.getElementById('login-pass').value;
+  const remember = document.getElementById('login-remember').checked;
+  const errorEl  = document.getElementById('login-error');
+  errorEl.textContent = '';
+
+  if (!username || !password) {
+    errorEl.textContent = 'Identifiant et mot de passe requis.';
+    return;
+  }
+
+  const btn = document.querySelector('.login-btn');
+  btn.textContent = 'VÉRIFICATION...';
+  btn.disabled = true;
+
+  const users = await getUsers();
+  const hash  = await hashPassword(password);
+
+  if (!users[username] || users[username] !== hash) {
+    errorEl.textContent = 'Identifiant ou mot de passe incorrect.';
+    btn.textContent = 'CONNEXION ▶';
+    btn.disabled = false;
+    const box = document.querySelector('.login-box');
+    box.style.animation = 'none';
+    box.offsetHeight;
+    box.style.animation = 'loginShake .4s ease';
+    return;
+  }
+
+  if (remember) localStorage.setItem(SESSION_KEY + '-remember', username);
+  else          sessionStorage.setItem(SESSION_KEY, username);
+
+  grantAccess(username);
+}
+
+function grantAccess(username) {
+  document.body.classList.add('logged-in');
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.title = `Connecté : ${username} — Cliquer pour quitter`;
+  loadData();
+}
+
+// ─── LOGOUT ──────────────────────────────────────────────────
+function logoutUser() {
+  if (!confirm('Se déconnecter ?')) return;
+  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY + '-remember');
+  document.body.classList.remove('logged-in');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  document.querySelector('.login-btn').textContent = 'CONNEXION ▶';
+  document.querySelector('.login-btn').disabled = false;
+}
+
+// ─── GESTION DES ACCÈS ───────────────────────────────────────
+async function openAccessModal() {
+  await renderUserList();
+  document.getElementById('access-modal').classList.add('open');
+}
+function closeAccessModal() {
+  document.getElementById('access-modal').classList.remove('open');
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-pass').value = '';
+}
+
+async function renderUserList() {
+  const list  = document.getElementById('access-user-list');
+  const users = await getUsers();
+  const currentUser = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY + '-remember') || '';
+  list.innerHTML = Object.keys(users).map(u => `
+    <div class="access-user-row">
+      <span class="access-username">${u}</span>
+      ${u === currentUser ? '<span class="access-badge">VOUS</span>' : ''}
+      ${u === currentUser
+        ? `<button class="access-del-btn" onclick="openChpassModal()" style="border-color:var(--gold);color:var(--gold)">🔑 MDP</button>`
+        : `<button class="access-del-btn" onclick="removeUser('${u}')">✕ Supprimer</button>`
+      }
+    </div>`).join('');
+}
+
+async function addUser() {
+  const name = document.getElementById('new-user-name').value.trim().toLowerCase();
+  const pass = document.getElementById('new-user-pass').value;
+  if (!name || !pass) { showToast('Remplis les deux champs'); return; }
+  const users = await getUsers();
+  if (users[name]) { showToast('Cet identifiant existe déjà'); return; }
+  users[name] = await hashPassword(pass);
+  await saveUsers(users);
+  document.getElementById('new-user-name').value = '';
+  document.getElementById('new-user-pass').value = '';
+  await renderUserList();
+  showToast('Utilisateur ajouté ✓');
+}
+
+async function removeUser(username) {
+  const users = await getUsers();
+  if (Object.keys(users).length <= 1) { showToast('Impossible — dernier utilisateur'); return; }
+  if (!confirm(`Supprimer l'accès de "${username}" ?`)) return;
+  delete users[username];
+  await saveUsers(users);
+  await renderUserList();
+  showToast('Accès supprimé');
+}
+
+// ─── CHANGER MOT DE PASSE ────────────────────────────────────
+function openChpassModal() {
+  closeAccessModal();
+  document.getElementById('chpass-modal').classList.add('open');
+  document.getElementById('chpass-error').textContent = '';
+}
+function closeChpassModal() {
+  document.getElementById('chpass-modal').classList.remove('open');
+  ['chpass-old','chpass-new','chpass-confirm'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function changePassword() {
+  const oldPass  = document.getElementById('chpass-old').value;
+  const newPass  = document.getElementById('chpass-new').value;
+  const confirm2 = document.getElementById('chpass-confirm').value;
+  const errEl    = document.getElementById('chpass-error');
+  errEl.textContent = '';
+  if (!oldPass || !newPass || !confirm2) { errEl.textContent = 'Tous les champs sont requis.'; return; }
+  if (newPass !== confirm2) { errEl.textContent = 'Les mots de passe ne correspondent pas.'; return; }
+  if (newPass.length < 4)   { errEl.textContent = 'Minimum 4 caractères.'; return; }
+  const username = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY + '-remember');
+  const users    = await getUsers();
+  const oldHash  = await hashPassword(oldPass);
+  if (users[username] !== oldHash) { errEl.textContent = 'Mot de passe actuel incorrect.'; return; }
+  users[username] = await hashPassword(newPass);
+  await saveUsers(users);
+  closeChpassModal();
+  showToast('Mot de passe modifié ✓');
+}
+
+// ─── ANIMATION SHAKE ─────────────────────────────────────────
+const shakeStyle = document.createElement('style');
+shakeStyle.textContent = `@keyframes loginShake {
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-5px)}
+  80%{transform:translateX(5px)}
+}`;
+document.head.appendChild(shakeStyle);
+
+function deleteCustomSection(id) {
+  if (!confirm('Supprimer cette section ?')) return;
+  document.getElementById('wrap-' + id)?.remove();
+  scheduleSave();
+}
+</script>
+
+</body></html>
+
+
