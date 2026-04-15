@@ -1134,19 +1134,82 @@ nav { display: none !important; }
 /* FAB */
 #add-section-fab { bottom: 22px; right: 22px; }
 
-/* Responsive */
+/* ── RESPONSIVE ─────────────────────────────────────────────── */
+#sidebar-toggle {
+  display: none; align-items: center; justify-content: center;
+  width: 34px; height: 34px; flex-shrink: 0;
+  background: transparent; border: 1px solid rgba(200,135,42,.22);
+  border-radius: var(--radius-sm); color: var(--gold2); font-size: 16px;
+  cursor: pointer; transition: all .18s;
+}
+#sidebar-toggle:hover { border-color: var(--gold2); background: rgba(200,135,42,.08); }
+#sidebar-overlay {
+  display: none; position: fixed; inset: 0; z-index: 350;
+  background: rgba(0,0,0,.6); backdrop-filter: blur(2px);
+}
+#sidebar-overlay.visible { display: block; }
+
+/* Tablette */
 @media(max-width:900px) {
-  .sidebar { width: 50px; }
+  .sidebar { width: 54px; }
   .sidebar-label, .topbar-badge, .topbar-progress-label { display: none; }
   .sidebar-item { justify-content: center; padding: 11px 8px; gap: 0; }
   .topbar .progress-outer { width: 80px; }
+  .sidebar-groups-scroll { display: none; }
+  .sidebar-divider { display: none; }
 }
+
+/* Mobile */
 @media(max-width:600px) {
-  .sidebar { display: none; }
-  .tab-panel .page-section { padding: 22px 16px; }
-  .overview-hero { flex-direction: column; padding: 18px 16px; }
-  .overview-stats { padding: 12px 16px; }
-  .journal-preview { padding: 18px 16px; }
+  /* Topbar */
+  .topbar { padding: 0 10px; height: 50px; gap: 6px; }
+  .topbar-center { display: none; }
+  .topbar-badge { display: none; }
+  #sidebar-toggle { display: flex; }
+  #access-btn, #export-btn, #import-btn, #reset-btn { display: none !important; }
+  .edit-mode #save-file-btn { font-size: 8.5px; padding: 4px 8px; }
+
+  /* Sidebar en drawer */
+  .sidebar {
+    position: fixed; top: 50px; left: 0; bottom: 0; z-index: 400;
+    width: 272px; transform: translateX(-100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow: 6px 0 32px rgba(0,0,0,.65);
+  }
+  .sidebar.mobile-open { transform: translateX(0); }
+  .sidebar-label { display: inline !important; }
+  .sidebar-item { justify-content: flex-start !important; padding: 11px 14px !important; gap: 10px !important; }
+  .sidebar-groups-scroll { display: block; }
+  .sidebar-divider { display: block; }
+
+  /* Layout */
+  .dashboard-body { overflow: visible; }
+  .main-content { overflow-y: auto; height: calc(100vh - 50px); }
+
+  /* Contenu */
+  .tab-panel .page-section { padding: 18px 14px; }
+  .section-title { font-size: 14px; letter-spacing: .08em; }
+  .ctab-header { padding: 18px 14px 10px; flex-wrap: wrap; gap: 8px; }
+  .ctab-content-area { padding: 14px; min-height: 180px; font-size: 15px; }
+  body.edit-mode .ctab-content-area { margin: 6px 8px; }
+
+  /* Vue d'ensemble */
+  .overview-hero { flex-direction: column; padding: 20px 14px; gap: 14px; }
+  .overview-stats { padding: 12px 14px; gap: 8px; }
+  .journal-preview { padding: 16px 14px; }
+
+  /* Tables scrollables horizontalement */
+  .tracker-table, .cs-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Grilles */
+  .char-grid { grid-template-columns: 1fr !important; }
+  .tech-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; }
+
+  /* Modals */
+  .modal-box { padding: 22px 16px; width: 96%; max-width: 96%; }
+
+  /* FAB */
+  #add-section-fab { bottom: 14px; right: 14px; width: 44px; height: 44px; font-size: 20px; }
 }
 
 /* ── SIDEBAR GROUPS ──────────────────────────────────────── */
@@ -1212,9 +1275,35 @@ body.edit-mode .sidebar-add-tab { display: flex; }
 }
 .sidebar-add-group:hover { color: var(--gold2); border-color: var(--gold); background: rgba(200,135,42,.05); }
 body.edit-mode .sidebar-add-group { display: flex; }
+/* sous-dossiers */
+.sidebar-subfolder { }
+.sidebar-subfolder-hdr {
+  display: flex; align-items: center; gap: 5px;
+  width: 100%; padding: 5px 10px 5px 18px;
+  background: none; border: none;
+  color: var(--cream3); font-family: var(--font-body);
+  font-size: 13px; cursor: pointer; user-select: none; text-align: left; transition: color .15s;
+}
+.sidebar-subfolder-hdr:hover { color: var(--gold2); }
+.sidebar-subfolder-chevron { font-size: 8px; transition: transform .2s; flex-shrink: 0; display: inline-block; color: var(--dim); }
+.sidebar-subfolder.collapsed .sidebar-subfolder-chevron { transform: rotate(-90deg); }
+.sidebar-subfolder-lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sidebar-subfolder-items { padding-left: 10px; overflow: hidden; }
+.sidebar-subfolder.collapsed .sidebar-subfolder-items { display: none; }
+/* tab-link dans le contenu */
+.tab-link { color: var(--gold2); text-decoration: underline; cursor: pointer; transition: color .15s; }
+.tab-link:hover { color: var(--gold3); }
 /* custom tab panel */
-.ctab-header { padding: 28px 32px 8px; border-bottom: 1px solid rgba(200,135,42,.12); }
-.ctab-title { font-family: var(--font-display); font-size: clamp(16px,2vw,24px); color: var(--gold2); font-weight: 600; }
+.ctab-header { padding: 28px 32px 8px; border-bottom: 1px solid rgba(200,135,42,.12); display: flex; align-items: center; gap: 12px; }
+.ctab-title { font-family: var(--font-display); font-size: clamp(16px,2vw,24px); color: var(--gold2); font-weight: 600; flex: 1; }
+.ctab-link-btn {
+  display: none; font-family: var(--font-mono); font-size: 9.5px;
+  padding: 4px 10px; background: transparent;
+  border: 1px solid rgba(200,135,42,.3); color: var(--gold-dim);
+  cursor: pointer; border-radius: var(--radius-sm); transition: all .18s;
+}
+.ctab-link-btn:hover { border-color: var(--gold2); color: var(--gold2); }
+body.edit-mode .ctab-link-btn { display: inline-block; }
 .ctab-content-area {
   padding: 24px 32px; min-height: 320px; outline: none;
   color: var(--cream2); font-family: var(--font-body); font-size: 16px; line-height: 1.75;
@@ -1325,12 +1414,32 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
   </div>
 </div>
 
+<!-- MODAL TAB LINK -->
+<div class="modal-overlay" id="tab-link-modal">
+  <div class="modal-box">
+    <div class="modal-title">🔗 INSÉRER UN LIEN VERS UN ONGLET</div>
+    <div class="modal-field">
+      <label class="modal-label">TEXTE DU LIEN</label>
+      <input type="text" class="modal-input" id="tab-link-text" placeholder="Ex : Voir la fiche de Serafyne...">
+    </div>
+    <div class="modal-field">
+      <label class="modal-label">ONGLET CIBLE</label>
+      <select class="modal-select" id="tab-link-target"></select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeTabLinkModal()">ANNULER</button>
+      <button class="btn-confirm" onclick="insertTabLink()">INSÉRER</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════ DASHBOARD ═══════════════════════════════════════ -->
 <div class="dashboard-layout">
 
   <!-- TOPBAR -->
   <header class="topbar">
     <div class="topbar-left">
+      <button id="sidebar-toggle" onclick="toggleMobileSidebar()" title="Menu">☰</button>
       <div class="topbar-logo" onclick="switchTab('overview')" title="Retour à l'accueil" style="cursor:pointer">
         <span class="torch"></span>
         <span class="topbar-title">BROKEN SUNSHINE</span>
@@ -1355,6 +1464,9 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
       <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     </div>
   </header>
+
+  <!-- OVERLAY SIDEBAR MOBILE -->
+  <div id="sidebar-overlay" onclick="closeMobileSidebar()"></div>
 
   <!-- DASHBOARD BODY -->
   <div class="dashboard-body">
@@ -2164,7 +2276,14 @@ function importData(event) {
               content: t.content || ''
             };
           });
-          _sidebarGroups.push({ id: grpId, name: grpDef.name || 'Nouveau groupe', icon: grpDef.icon || '', collapsed: false, tabs: tabs });
+          var items = tabs.map(function(t) { return Object.assign({ type: 'tab' }, t); });
+          // Support sous-dossiers dans le JSON d'import
+          (grpDef.folders || []).forEach(function(fDef) {
+            var fTabs = (fDef.tabs || []).map(function(t) { return { id: 'ctab-' + Date.now() + '-' + Math.random().toString(36).slice(2,7), name: t.name || 'Onglet', icon: t.icon || '', content: t.content || '' }; });
+            items.push({ type: 'folder', id: 'f' + Date.now() + '-' + Math.random().toString(36).slice(2,5), name: fDef.name || 'Dossier', icon: fDef.icon || '📂', collapsed: false, tabs: fTabs });
+            fTabs.forEach(function(tab) { ensureCustomPanel(tab); });
+          });
+          _sidebarGroups.push({ id: grpId, name: grpDef.name || 'Nouveau groupe', icon: grpDef.icon || '', collapsed: false, items: items });
           tabs.forEach(function(tab) { ensureCustomPanel(tab); });
         });
         renderSidebarGroups();
@@ -2858,6 +2977,28 @@ function switchTab(tabId) {
   if (mc) mc.scrollTop = 0;
   if (tabId === 'overview') { updateOverviewStats(); renderJournalPreview(); }
   sessionStorage.setItem('bs-active-tab', tabId);
+  closeMobileSidebar();
+}
+
+// ─── SIDEBAR MOBILE ───────────────────────────────────────────
+function toggleMobileSidebar() {
+  var sidebar  = document.querySelector('.sidebar');
+  var overlay  = document.getElementById('sidebar-overlay');
+  var isOpen   = sidebar.classList.contains('mobile-open');
+  if (isOpen) { closeMobileSidebar(); } else {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('visible');
+    document.getElementById('sidebar-toggle').textContent = '✕';
+  }
+}
+function closeMobileSidebar() {
+  var sidebar = document.querySelector('.sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  if (!sidebar) return;
+  sidebar.classList.remove('mobile-open');
+  if (overlay) overlay.classList.remove('visible');
+  var btn = document.getElementById('sidebar-toggle');
+  if (btn) btn.textContent = '☰';
 }
 
 // ─── STATS CHIPS ─────────────────────────────────────────────
@@ -2914,16 +3055,37 @@ function renderJournalPreview() {
 
 var _sidebarGroups = [];
 
-/* ── utilitaire ── */
+/* ── utilitaires ── */
 function _escH(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _migrateGroup(grp) {
+  // Migration ancien format (tabs) → nouveau (items)
+  if (grp.tabs && !grp.items) {
+    grp.items = grp.tabs.map(function(t) { return Object.assign({ type: 'tab' }, t); });
+    delete grp.tabs;
+  }
+  if (!grp.items) grp.items = [];
+}
+function _getAllTabs(grp) {
+  var tabs = [];
+  _migrateGroup(grp);
+  grp.items.forEach(function(item) {
+    if (!item.type || item.type === 'tab') tabs.push(item);
+    else if (item.type === 'folder') (item.tabs || []).forEach(function(t) { tabs.push(t); });
+  });
+  return tabs;
+}
+function _findFolder(grp, foldId) {
+  return (grp.items || []).find(function(item) { return item.type === 'folder' && item.id === foldId; });
 }
 
 /* ── initialisation au login ── */
 function initSidebarGroups() {
+  _sidebarGroups.forEach(function(grp) { _migrateGroup(grp); });
   renderSidebarGroups();
   _sidebarGroups.forEach(function(grp) {
-    grp.tabs.forEach(function(tab) { ensureCustomPanel(tab); });
+    _getAllTabs(grp).forEach(function(tab) { ensureCustomPanel(tab); });
   });
 }
 
@@ -2932,33 +3094,34 @@ function renderSidebarGroups() {
   var container = document.getElementById('sidebar-groups-container');
   if (!container) return;
   container.innerHTML = '';
-  _sidebarGroups.forEach(function(grp) {
-    container.appendChild(buildGroupEl(grp));
-  });
+  _sidebarGroups.forEach(function(grp) { container.appendChild(buildGroupEl(grp)); });
 }
 
 function buildGroupEl(grp) {
+  _migrateGroup(grp);
   var wrap = document.createElement('div');
   wrap.className = 'sidebar-group' + (grp.collapsed ? ' collapsed' : '');
   wrap.id = 'sgrp-' + grp.id;
 
-  /* ── header ── */
   var hdr = document.createElement('button');
   hdr.className = 'sidebar-group-hdr';
   hdr.innerHTML =
     '<span class="sidebar-group-chevron">▾</span>' +
     '<span class="sidebar-group-lbl">' + _escH((grp.icon ? grp.icon + ' ' : '') + grp.name) + '</span>' +
     '<span class="sidebar-group-acts">' +
+      '<button class="sg-act-btn" title="Ajouter un sous-dossier" onclick="event.stopPropagation();addSubFolder(\'' + grp.id + '\')">📁＋</button>' +
       '<button class="sg-act-btn" title="Renommer" onclick="event.stopPropagation();renameSidebarGroup(\'' + grp.id + '\')">✏</button>' +
       '<button class="sg-act-btn" title="Supprimer" onclick="event.stopPropagation();deleteSidebarGroup(\'' + grp.id + '\')">🗑</button>' +
     '</span>';
   hdr.onclick = function() { toggleSidebarGroup(grp.id); };
 
-  /* ── items ── */
   var items = document.createElement('div');
   items.className = 'sidebar-group-items';
   items.id = 'sgitems-' + grp.id;
-  grp.tabs.forEach(function(tab) { items.appendChild(buildTabItemEl(grp.id, tab)); });
+  grp.items.forEach(function(item) {
+    if (!item.type || item.type === 'tab') items.appendChild(buildTabItemEl(grp.id, item, null));
+    else if (item.type === 'folder') items.appendChild(buildSubFolderEl(grp.id, item));
+  });
 
   var addBtn = document.createElement('button');
   addBtn.className = 'sidebar-add-tab';
@@ -2971,16 +3134,44 @@ function buildGroupEl(grp) {
   return wrap;
 }
 
-function buildTabItemEl(grpId, tab) {
+function buildSubFolderEl(grpId, folder) {
+  var wrap = document.createElement('div');
+  wrap.className = 'sidebar-subfolder' + (folder.collapsed ? ' collapsed' : '');
+  wrap.id = 'sfold-' + folder.id;
+
+  var hdr = document.createElement('button');
+  hdr.className = 'sidebar-subfolder-hdr';
+  hdr.innerHTML =
+    '<span class="sidebar-subfolder-chevron">▾</span>' +
+    '<span class="sidebar-subfolder-lbl">' + _escH((folder.icon ? folder.icon + ' ' : '') + folder.name) + '</span>' +
+    '<span class="sidebar-tab-acts">' +
+      '<button class="st-act-btn" title="Ajouter un onglet" onclick="event.stopPropagation();addTabToSubFolder(\'' + grpId + '\',\'' + folder.id + '\')">＋</button>' +
+      '<button class="st-act-btn" title="Renommer" onclick="event.stopPropagation();renameSubFolder(\'' + grpId + '\',\'' + folder.id + '\')">✏</button>' +
+      '<button class="st-act-btn" title="Supprimer" onclick="event.stopPropagation();deleteSubFolder(\'' + grpId + '\',\'' + folder.id + '\')">🗑</button>' +
+    '</span>';
+  hdr.onclick = function() { toggleSubFolder(grpId, folder.id); };
+
+  var items = document.createElement('div');
+  items.className = 'sidebar-subfolder-items';
+  items.id = 'sfitems-' + folder.id;
+  (folder.tabs || []).forEach(function(tab) { items.appendChild(buildTabItemEl(grpId, tab, folder.id)); });
+
+  wrap.appendChild(hdr);
+  wrap.appendChild(items);
+  return wrap;
+}
+
+function buildTabItemEl(grpId, tab, foldId) {
   var btn = document.createElement('button');
   btn.className = 'sidebar-tab-item';
   btn.id = 'stab-btn-' + tab.id;
   btn.setAttribute('data-tab', tab.id);
+  var fParam = foldId ? '\'' + foldId + '\'' : 'null';
   btn.innerHTML =
     '<span class="sidebar-tab-name">' + _escH((tab.icon ? tab.icon + ' ' : '') + tab.name) + '</span>' +
     '<span class="sidebar-tab-acts">' +
-      '<button class="st-act-btn" title="Renommer" onclick="event.stopPropagation();renameSidebarTab(\'' + grpId + '\',\'' + tab.id + '\')">✏</button>' +
-      '<button class="st-act-btn" title="Supprimer" onclick="event.stopPropagation();deleteSidebarTab(\'' + grpId + '\',\'' + tab.id + '\')">🗑</button>' +
+      '<button class="st-act-btn" title="Renommer" onclick="event.stopPropagation();renameSidebarTab(\'' + grpId + '\',\'' + tab.id + '\',' + fParam + ')">✏</button>' +
+      '<button class="st-act-btn" title="Supprimer" onclick="event.stopPropagation();deleteSidebarTab(\'' + grpId + '\',\'' + tab.id + '\',' + fParam + ')">🗑</button>' +
     '</span>';
   btn.onclick = function() { switchTab(tab.id); };
   return btn;
@@ -2998,6 +3189,7 @@ function ensureCustomPanel(tab) {
       '<div class="ctab-title" id="ctab-title-' + tab.id + '">' +
         _escH((tab.icon ? tab.icon + ' ' : '') + tab.name) +
       '</div>' +
+      '<button class="ctab-link-btn" onclick="openTabLinkModal(this)" title="Insérer un lien vers un onglet">🔗 Insérer un lien</button>' +
     '</div>' +
     '<div class="ctab-content-area" id="ctab-content-' + tab.id + '" contenteditable="false">' +
       (tab.content || '<span class="ctab-placeholder">Contenu de l\'onglet — active le mode édition pour écrire ici.</span>') +
@@ -3008,10 +3200,9 @@ function ensureCustomPanel(tab) {
 /* ── capture du contenu avant sauvegarde ── */
 function captureCustomTabContents() {
   _sidebarGroups.forEach(function(grp) {
-    grp.tabs.forEach(function(tab) {
+    _getAllTabs(grp).forEach(function(tab) {
       var el = document.getElementById('ctab-content-' + tab.id);
       if (el) {
-        // Ne pas sauvegarder le placeholder
         var html = el.innerHTML;
         if (el.querySelector('.ctab-placeholder')) html = '';
         tab.content = html;
@@ -3020,7 +3211,7 @@ function captureCustomTabContents() {
   });
 }
 
-/* ── toggle collapse ── */
+/* ── toggle collapse groupe ── */
 function toggleSidebarGroup(grpId) {
   var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
   if (!grp) return;
@@ -3029,18 +3220,23 @@ function toggleSidebarGroup(grpId) {
   if (el) el.classList.toggle('collapsed', grp.collapsed);
 }
 
+/* ── toggle collapse sous-dossier ── */
+function toggleSubFolder(grpId, foldId) {
+  var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
+  if (!grp) return;
+  var folder = _findFolder(grp, foldId);
+  if (!folder) return;
+  folder.collapsed = !folder.collapsed;
+  var el = document.getElementById('sfold-' + foldId);
+  if (el) el.classList.toggle('collapsed', folder.collapsed);
+}
+
 /* ── ajout groupe ── */
 function addSidebarGroup() {
   var name = prompt('Nom du groupe :', 'Nouveau groupe');
   if (!name || !name.trim()) return;
   var icon = prompt('Icône (emoji — optionnel) :', '📁');
-  var grp = {
-    id: 'g' + Date.now(),
-    name: name.trim(),
-    icon: (icon || '').trim(),
-    collapsed: false,
-    tabs: []
-  };
+  var grp = { id: 'g' + Date.now(), name: name.trim(), icon: (icon || '').trim(), collapsed: false, items: [] };
   _sidebarGroups.push(grp);
   saveAll();
   renderSidebarGroups();
@@ -3063,68 +3259,148 @@ function renameSidebarGroup(grpId) {
 function deleteSidebarGroup(grpId) {
   if (!confirm('Supprimer ce groupe et tous ses onglets ?')) return;
   var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
-  if (grp) {
-    grp.tabs.forEach(function(tab) {
-      var panel = document.getElementById('tab-' + tab.id);
-      if (panel) panel.remove();
-    });
-  }
+  if (grp) { _getAllTabs(grp).forEach(function(tab) { var p = document.getElementById('tab-' + tab.id); if (p) p.remove(); }); }
   _sidebarGroups = _sidebarGroups.filter(function(g) { return g.id !== grpId; });
-  saveAll();
-  renderSidebarGroups();
-  switchTab('overview');
+  saveAll(); renderSidebarGroups(); switchTab('overview');
+}
+
+/* ── ajout sous-dossier ── */
+function addSubFolder(grpId) {
+  var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
+  if (!grp) return;
+  _migrateGroup(grp);
+  var name = prompt('Nom du sous-dossier :', 'Nouveau dossier');
+  if (!name || !name.trim()) return;
+  var icon = prompt('Icône (emoji — optionnel) :', '📂');
+  var folder = { type: 'folder', id: 'f' + Date.now(), name: name.trim(), icon: (icon || '').trim(), collapsed: false, tabs: [] };
+  grp.items.push(folder);
+  saveAll(); renderSidebarGroups();
+}
+
+/* ── renommer sous-dossier ── */
+function renameSubFolder(grpId, foldId) {
+  var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
+  if (!grp) return;
+  var folder = _findFolder(grp, foldId);
+  if (!folder) return;
+  var name = prompt('Nouveau nom :', folder.name);
+  if (!name || !name.trim()) return;
+  var icon = prompt('Icône :', folder.icon || '');
+  folder.name = name.trim(); folder.icon = (icon || '').trim();
+  saveAll(); renderSidebarGroups();
+}
+
+/* ── supprimer sous-dossier ── */
+function deleteSubFolder(grpId, foldId) {
+  if (!confirm('Supprimer ce dossier et tous ses onglets ?')) return;
+  var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
+  if (!grp) return;
+  var folder = _findFolder(grp, foldId);
+  if (folder) { (folder.tabs || []).forEach(function(tab) { var p = document.getElementById('tab-' + tab.id); if (p) p.remove(); }); }
+  grp.items = grp.items.filter(function(item) { return item.id !== foldId; });
+  saveAll(); renderSidebarGroups(); switchTab('overview');
 }
 
 /* ── ajout onglet dans un groupe ── */
 function addTabToGroup(grpId) {
   var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
   if (!grp) return;
+  _migrateGroup(grp);
   var name = prompt('Nom de l\'onglet :', 'Nouvel onglet');
   if (!name || !name.trim()) return;
   var icon = prompt('Icône (emoji — optionnel) :', '📄');
-  var tab = {
-    id: 't' + Date.now(),
-    name: name.trim(),
-    icon: (icon || '').trim(),
-    content: ''
-  };
-  grp.tabs.push(tab);
-  ensureCustomPanel(tab);
-  saveAll();
-  renderSidebarGroups();
-  // Petit délai pour laisser le panel s'insérer dans le DOM
+  var tab = { type: 'tab', id: 't' + Date.now(), name: name.trim(), icon: (icon || '').trim(), content: '' };
+  grp.items.push(tab);
+  ensureCustomPanel(tab); saveAll(); renderSidebarGroups();
+  setTimeout(function() { switchTab(tab.id); }, 30);
+}
+
+/* ── ajout onglet dans un sous-dossier ── */
+function addTabToSubFolder(grpId, foldId) {
+  var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
+  if (!grp) return;
+  var folder = _findFolder(grp, foldId);
+  if (!folder) return;
+  var name = prompt('Nom de l\'onglet :', 'Nouvel onglet');
+  if (!name || !name.trim()) return;
+  var icon = prompt('Icône (emoji — optionnel) :', '📄');
+  var tab = { id: 't' + Date.now(), name: name.trim(), icon: (icon || '').trim(), content: '' };
+  folder.tabs.push(tab);
+  ensureCustomPanel(tab); saveAll(); renderSidebarGroups();
   setTimeout(function() { switchTab(tab.id); }, 30);
 }
 
 /* ── renommer onglet ── */
-function renameSidebarTab(grpId, tabId) {
+function renameSidebarTab(grpId, tabId, foldId) {
   var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
   if (!grp) return;
-  var tab = grp.tabs.find(function(t) { return t.id === tabId; });
+  var tab;
+  if (foldId) { var folder = _findFolder(grp, foldId); if (folder) tab = (folder.tabs || []).find(function(t) { return t.id === tabId; }); }
+  else { tab = (grp.items || []).find(function(t) { return t.id === tabId; }); }
   if (!tab) return;
   var name = prompt('Nouveau nom :', tab.name);
   if (!name || !name.trim()) return;
   var icon = prompt('Icône :', tab.icon || '');
-  tab.name = name.trim();
-  tab.icon = (icon || '').trim();
-  // Mettre à jour le titre dans le panel
+  tab.name = name.trim(); tab.icon = (icon || '').trim();
   var titleEl = document.getElementById('ctab-title-' + tabId);
   if (titleEl) titleEl.textContent = (tab.icon ? tab.icon + ' ' : '') + tab.name;
-  saveAll();
-  renderSidebarGroups();
+  saveAll(); renderSidebarGroups();
 }
 
 /* ── supprimer onglet ── */
-function deleteSidebarTab(grpId, tabId) {
+function deleteSidebarTab(grpId, tabId, foldId) {
   if (!confirm('Supprimer cet onglet et son contenu ?')) return;
   var grp = _sidebarGroups.find(function(g) { return g.id === grpId; });
   if (!grp) return;
-  grp.tabs = grp.tabs.filter(function(t) { return t.id !== tabId; });
+  if (foldId) { var folder = _findFolder(grp, foldId); if (folder) folder.tabs = folder.tabs.filter(function(t) { return t.id !== tabId; }); }
+  else { grp.items = grp.items.filter(function(item) { return item.id !== tabId; }); }
   var panel = document.getElementById('tab-' + tabId);
   if (panel) panel.remove();
-  saveAll();
-  renderSidebarGroups();
-  switchTab('overview');
+  saveAll(); renderSidebarGroups(); switchTab('overview');
+}
+
+/* ── liens vers onglets ── */
+var _savedRange = null;
+function openTabLinkModal() {
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount) _savedRange = sel.getRangeAt(0).cloneRange();
+  var select = document.getElementById('tab-link-target');
+  select.innerHTML = '';
+  var builtIn = [
+    { id: 'overview', name: '🎯 Vue d\'ensemble' },
+    { id: 'lore',     name: '📖 Lore & Univers' },
+    { id: 'systemes', name: '⚔ Systèmes' },
+    { id: 'dev',      name: '💻 Dev / Unity' },
+    { id: 'journal',  name: '📔 Journal' }
+  ];
+  builtIn.forEach(function(t) {
+    var opt = document.createElement('option'); opt.value = t.id; opt.textContent = t.name; select.appendChild(opt);
+  });
+  _sidebarGroups.forEach(function(grp) {
+    _getAllTabs(grp).forEach(function(tab) {
+      var opt = document.createElement('option'); opt.value = tab.id; opt.textContent = (tab.icon ? tab.icon + ' ' : '') + tab.name; select.appendChild(opt);
+    });
+  });
+  document.getElementById('tab-link-modal').classList.add('open');
+  setTimeout(function() { document.getElementById('tab-link-text').focus(); }, 50);
+}
+function closeTabLinkModal() {
+  document.getElementById('tab-link-modal').classList.remove('open');
+}
+function insertTabLink() {
+  var text = document.getElementById('tab-link-text').value.trim();
+  var targetId = document.getElementById('tab-link-target').value;
+  if (!text) { showToast('TEXTE DU LIEN REQUIS'); return; }
+  var linkHtml = '<a href="#" class="tab-link" onclick="switchTab(\'' + targetId + '\');return false;">' + _escH(text) + '</a>';
+  if (_savedRange) {
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(_savedRange);
+    document.execCommand('insertHTML', false, linkHtml);
+  }
+  closeTabLinkModal();
+  scheduleSave();
+  document.getElementById('tab-link-text').value = '';
 }
 
 </script>
