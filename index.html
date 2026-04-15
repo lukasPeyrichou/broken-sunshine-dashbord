@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Broken Sunshine — Dev Dashboard v2</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400;1,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="icon" href="Broken Sunshien Logo v1.png">
 <style>
 
 /* ===== IMPORTS ===== */
@@ -2149,9 +2150,32 @@ function importData(event) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      localStorage.setItem(STORAGE_KEY, e.target.result);
-      showToast('IMPORT OK — RECHARGEMENT...');
-      setTimeout(() => location.reload(), 1200);
+      const parsed = JSON.parse(e.target.result);
+
+      if (parsed.type === 'tab-import') {
+        // Mode fusion : ajoute les groupes/onglets sans écraser les données existantes
+        (parsed.groups || []).forEach(function(grpDef) {
+          const grpId = 'grp-' + Date.now() + '-' + Math.random().toString(36).slice(2,7);
+          const tabs = (grpDef.tabs || []).map(function(t) {
+            return {
+              id: 'ctab-' + Date.now() + '-' + Math.random().toString(36).slice(2,7),
+              name: t.name || 'Onglet',
+              icon: t.icon || '',
+              content: t.content || ''
+            };
+          });
+          _sidebarGroups.push({ id: grpId, name: grpDef.name || 'Nouveau groupe', icon: grpDef.icon || '', collapsed: false, tabs: tabs });
+          tabs.forEach(function(tab) { ensureCustomPanel(tab); });
+        });
+        renderSidebarGroups();
+        saveAll();
+        showToast('ONGLET(S) IMPORTÉ(S) ✓');
+      } else {
+        // Mode remplacement complet (comportement existant)
+        localStorage.setItem(STORAGE_KEY, e.target.result);
+        showToast('IMPORT OK — RECHARGEMENT...');
+        setTimeout(() => location.reload(), 1200);
+      }
     } catch(err) { showToast('ERREUR JSON'); }
   };
   reader.readAsText(file);
