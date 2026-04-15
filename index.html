@@ -1133,6 +1133,18 @@ nav { display: none !important; }
 
 /* FAB */
 #add-section-fab { bottom: 22px; right: 22px; }
+#mobile-publish-fab {
+  display: none;
+  position: fixed; bottom: 22px; left: 22px; z-index: 300;
+  width: 52px; height: 52px;
+  background: rgba(200,135,42,.15);
+  border: 1px solid var(--gold);
+  color: var(--gold3); font-size: 22px;
+  cursor: pointer; align-items: center; justify-content: center;
+  border-radius: 50%; transition: all .2s;
+  box-shadow: 0 4px 22px rgba(200,135,42,.25);
+}
+#mobile-publish-fab:hover { background: rgba(200,135,42,.28); transform: scale(1.08); }
 
 /* ── RESPONSIVE ─────────────────────────────────────────────── */
 #sidebar-toggle {
@@ -1166,8 +1178,10 @@ nav { display: none !important; }
   .topbar-center { display: none; }
   .topbar-badge { display: none; }
   #sidebar-toggle { display: flex; }
-  #access-btn, #export-btn, #import-btn, #reset-btn { display: none !important; }
-  .edit-mode #save-file-btn { font-size: 8.5px; padding: 4px 8px; }
+  #access-btn, #export-btn, #import-btn, #reset-btn, #save-file-btn { display: none !important; }
+  .edit-mode #mobile-publish-fab { display: flex; }
+  #add-section-fab { right: 14px; }
+  .edit-mode #add-section-fab { bottom: 80px; }
 
   /* Sidebar en drawer */
   .sidebar {
@@ -1389,6 +1403,7 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
 
 <!-- ADD SECTION FAB -->
 <button id="add-section-fab" onclick="openAddModal()" title="Nouvelle section">+</button>
+<button id="mobile-publish-fab" onclick="saveToFile()" title="Publier les modifications">☁</button>
 
 <!-- MODAL ADD SECTION -->
 <div class="modal-overlay" id="add-modal">
