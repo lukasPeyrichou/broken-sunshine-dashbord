@@ -1321,12 +1321,34 @@ body.edit-mode .ctab-link-btn { display: inline-block; }
 .ctab-content-area {
   padding: 24px 32px; min-height: 320px; outline: none;
   color: var(--cream2); font-family: var(--font-body); font-size: 16px; line-height: 1.75;
-  white-space: pre-wrap;
+  white-space: normal;
 }
 body.edit-mode .ctab-content-area {
   outline: 1px dashed rgba(200,135,42,.22); border-radius: 4px; margin: 8px 24px;
+  white-space: pre-wrap; font-family: var(--font-mono); font-size: 14px;
 }
 body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
+/* Markdown rendu */
+.ctab-content-area h1 { font-family: var(--font-display); font-size: 1.6em; color: var(--gold3); margin: 1em 0 .5em; letter-spacing: .1em; }
+.ctab-content-area h2 { font-family: var(--font-display); font-size: 1.25em; color: var(--gold2); margin: 1em 0 .4em; padding-bottom: .3em; border-bottom: 1px solid rgba(200,135,42,.2); }
+.ctab-content-area h3 { font-family: var(--font-display); font-size: 1.05em; color: var(--cream); margin: .9em 0 .3em; }
+.ctab-content-area p { margin: 0 0 .8em; }
+.ctab-content-area ul, .ctab-content-area ol { padding-left: 1.5em; margin: 0 0 .8em; }
+.ctab-content-area li { margin-bottom: .3em; }
+.ctab-content-area code { font-family: var(--font-mono); font-size: 13px; background: rgba(200,135,42,.1); padding: 2px 6px; border-radius: 3px; color: var(--gold3); }
+.ctab-content-area pre { background: rgba(0,0,0,.4); padding: 14px; border-radius: var(--radius); margin: 0 0 .8em; overflow-x: auto; }
+.ctab-content-area pre code { background: none; padding: 0; color: var(--cream2); }
+.ctab-content-area blockquote { border-left: 3px solid var(--gold-dim); padding-left: 14px; color: var(--cream3); font-style: italic; margin: 0 0 .8em; }
+.ctab-content-area strong { color: var(--cream); font-weight: 700; }
+.ctab-content-area em { color: var(--cream2); font-style: italic; }
+.ctab-content-area hr { border: none; border-top: 1px solid rgba(200,135,42,.2); margin: 1.2em 0; }
+.ctab-content-area table { border-collapse: collapse; margin: 0 0 .8em; width: 100%; }
+.ctab-content-area th { background: rgba(200,135,42,.1); padding: 8px 12px; text-align: left; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; color: var(--gold2); border-bottom: 1px solid rgba(200,135,42,.25); }
+.ctab-content-area td { padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,.04); }
+/* Drag & drop */
+.dragging { opacity: .35; }
+.drag-over-before { border-top: 2px solid var(--gold2) !important; }
+.drag-over-after  { border-bottom: 2px solid var(--gold2) !important; }
 .ctab-placeholder { color: var(--dim); font-style: italic; }
 
 </style>
@@ -2115,6 +2137,7 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
 </div>
 
 <!-- Firebase SDK -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
@@ -2156,8 +2179,9 @@ function toggleEdit() {
       el.contentEditable = 'true';
       el.addEventListener('input', scheduleSave);
     });
-    // Onglets custom : activer contenteditable
+    // Onglets custom : passer en mode édition markdown (afficher le markdown brut)
     document.querySelectorAll('.ctab-content-area').forEach(function(el) {
+      el.textContent = el.dataset.raw || '';
       el.contentEditable = 'true';
       el.addEventListener('input', scheduleSave);
     });
@@ -2167,6 +2191,11 @@ function toggleEdit() {
     document.querySelectorAll('[contenteditable]').forEach(el => {
       el.contentEditable = 'false';
       el.removeEventListener('input', scheduleSave);
+    });
+    // Onglets custom : sauvegarder le markdown brut et re-rendre
+    document.querySelectorAll('.ctab-content-area').forEach(function(el) {
+      el.dataset.raw = el.textContent;
+      el.innerHTML = _parseMarkdown(el.textContent);
     });
     saveAll();
     showToast('SAUVEGARDÉ ✓');
@@ -3120,6 +3149,7 @@ function buildGroupEl(grp) {
 
   var hdr = document.createElement('button');
   hdr.className = 'sidebar-group-hdr';
+  hdr.draggable = true;
   hdr.innerHTML =
     '<span class="sidebar-group-chevron">▾</span>' +
     '<span class="sidebar-group-lbl">' + _escH((grp.icon ? grp.icon + ' ' : '') + grp.name) + '</span>' +
@@ -3129,6 +3159,12 @@ function buildGroupEl(grp) {
       '<button class="sg-act-btn" title="Supprimer" onclick="event.stopPropagation();deleteSidebarGroup(\'' + grp.id + '\')">🗑</button>' +
     '</span>';
   hdr.onclick = function() { toggleSidebarGroup(grp.id); };
+  hdr.addEventListener('dragstart', function(e) { e.stopPropagation(); _dndStart(e, { type:'group', grpId:grp.id }, wrap); });
+  hdr.addEventListener('dragend',   function(e) { _dndEnd(e, wrap); });
+
+  wrap.addEventListener('dragover',  function(e) { if (_dragSrc && _dragSrc.type==='group') _dndOver(e, wrap); });
+  wrap.addEventListener('dragleave', function(e) { _dndLeave(wrap); });
+  wrap.addEventListener('drop',      function(e) { _dndDropGroup(e, grp.id, wrap); });
 
   var items = document.createElement('div');
   items.className = 'sidebar-group-items';
@@ -3181,6 +3217,7 @@ function buildTabItemEl(grpId, tab, foldId) {
   btn.className = 'sidebar-tab-item';
   btn.id = 'stab-btn-' + tab.id;
   btn.setAttribute('data-tab', tab.id);
+  btn.draggable = true;
   var fParam = foldId ? '\'' + foldId + '\'' : 'null';
   btn.innerHTML =
     '<span class="sidebar-tab-name">' + _escH((tab.icon ? tab.icon + ' ' : '') + tab.name) + '</span>' +
@@ -3189,6 +3226,11 @@ function buildTabItemEl(grpId, tab, foldId) {
       '<button class="st-act-btn" title="Supprimer" onclick="event.stopPropagation();deleteSidebarTab(\'' + grpId + '\',\'' + tab.id + '\',' + fParam + ')">🗑</button>' +
     '</span>';
   btn.onclick = function() { switchTab(tab.id); };
+  btn.addEventListener('dragstart', function(e) { e.stopPropagation(); _dndStart(e, { type:'tab', grpId:grpId, tabId:tab.id, foldId:foldId||null }); });
+  btn.addEventListener('dragend',   _dndEnd);
+  btn.addEventListener('dragover',  function(e) { if (_dragSrc && _dragSrc.type==='tab') _dndOver(e, btn); });
+  btn.addEventListener('dragleave', function(e) { _dndLeave(btn); });
+  btn.addEventListener('drop',      function(e) { _dndDropTab(e, grpId, tab.id, foldId||null); });
   return btn;
 }
 
@@ -3199,6 +3241,7 @@ function ensureCustomPanel(tab) {
   var panel = document.createElement('div');
   panel.className = 'tab-panel';
   panel.id = panelId;
+  var rawContent = tab.content || '';
   panel.innerHTML =
     '<div class="ctab-header">' +
       '<div class="ctab-title" id="ctab-title-' + tab.id + '">' +
@@ -3206,10 +3249,11 @@ function ensureCustomPanel(tab) {
       '</div>' +
       '<button class="ctab-link-btn" onclick="openTabLinkModal(this)" title="Insérer un lien vers un onglet">🔗 Insérer un lien</button>' +
     '</div>' +
-    '<div class="ctab-content-area" id="ctab-content-' + tab.id + '" contenteditable="false">' +
-      (tab.content || '<span class="ctab-placeholder">Contenu de l\'onglet — active le mode édition pour écrire ici.</span>') +
-    '</div>';
+    '<div class="ctab-content-area" id="ctab-content-' + tab.id + '" contenteditable="false"></div>';
   document.querySelector('.main-content').appendChild(panel);
+  var contentEl = panel.querySelector('.ctab-content-area');
+  contentEl.dataset.raw = rawContent;
+  contentEl.innerHTML = rawContent ? _parseMarkdown(rawContent) : '<span class="ctab-placeholder">Contenu de l\'onglet — active le mode édition pour écrire ici.</span>';
 }
 
 /* ── capture du contenu avant sauvegarde ── */
@@ -3218,9 +3262,10 @@ function captureCustomTabContents() {
     _getAllTabs(grp).forEach(function(tab) {
       var el = document.getElementById('ctab-content-' + tab.id);
       if (el) {
-        var html = el.innerHTML;
-        if (el.querySelector('.ctab-placeholder')) html = '';
-        tab.content = html;
+        if (editMode) {
+          el.dataset.raw = el.textContent;
+        }
+        tab.content = el.dataset.raw || '';
       }
     });
   });
@@ -3375,6 +3420,85 @@ function deleteSidebarTab(grpId, tabId, foldId) {
 }
 
 /* ── liens vers onglets ── */
+// ─── DRAG & DROP SIDEBAR ─────────────────────────────────────
+var _dragSrc = null;
+
+function _dndStart(e, data, visualEl) {
+  _dragSrc = data;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', '1'); // requis Firefox
+  var el = visualEl || e.currentTarget;
+  setTimeout(function() { el.classList.add('dragging'); }, 0);
+}
+function _dndEnd(e, visualEl) {
+  var el = visualEl || e.currentTarget;
+  el.classList.remove('dragging');
+  document.querySelectorAll('.drag-over-before,.drag-over-after').forEach(function(x) {
+    x.classList.remove('drag-over-before','drag-over-after');
+  });
+}
+function _dndOver(e, el) {
+  e.preventDefault(); e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+  var rect = el.getBoundingClientRect();
+  el.classList.remove('drag-over-before','drag-over-after');
+  el.classList.add(e.clientY < rect.top + rect.height / 2 ? 'drag-over-before' : 'drag-over-after');
+}
+function _dndLeave(el) {
+  el.classList.remove('drag-over-before','drag-over-after');
+}
+function _arrayMoveTo(arr, fromId, toId, after) {
+  var fi = arr.findIndex(function(x){ return x.id===fromId; });
+  if (fi===-1) return;
+  var moved = arr.splice(fi,1)[0];
+  var ti = arr.findIndex(function(x){ return x.id===toId; });
+  if (ti===-1) { arr.splice(fi,0,moved); return; }
+  arr.splice(after ? ti+1 : ti, 0, moved);
+}
+function _dndDropGroup(e, targetGrpId, wrap) {
+  e.preventDefault(); e.stopPropagation();
+  if (!_dragSrc || _dragSrc.type!=='group' || _dragSrc.grpId===targetGrpId) { _dndLeave(wrap); return; }
+  var after = wrap.classList.contains('drag-over-after');
+  _dndLeave(wrap);
+  _arrayMoveTo(_sidebarGroups, _dragSrc.grpId, targetGrpId, after);
+  _dragSrc = null;
+  saveAll(); renderSidebarGroups();
+  _sidebarGroups.forEach(function(g){ _getAllTabs(g).forEach(function(t){ ensureCustomPanel(t); }); });
+}
+function _dndDropTab(e, targetGrpId, targetTabId, targetFoldId) {
+  e.preventDefault(); e.stopPropagation();
+  if (!_dragSrc || _dragSrc.type!=='tab' || _dragSrc.tabId===targetTabId) return;
+  if (_dragSrc.grpId!==targetGrpId || _dragSrc.foldId!==targetFoldId) return; // même conteneur seulement
+  var targetBtn = document.getElementById('stab-btn-' + targetTabId);
+  var after = targetBtn && targetBtn.classList.contains('drag-over-after');
+  if (targetBtn) _dndLeave(targetBtn);
+  var grp = _sidebarGroups.find(function(g){ return g.id===targetGrpId; });
+  if (!grp) return;
+  var arr = targetFoldId ? (function(){ var f=_findFolder(grp,targetFoldId); return f?f.tabs:null; })() : grp.items;
+  if (!arr) return;
+  _arrayMoveTo(arr, _dragSrc.tabId, targetTabId, after);
+  _dragSrc = null;
+  saveAll(); renderSidebarGroups();
+  _sidebarGroups.forEach(function(g){ _getAllTabs(g).forEach(function(t){ ensureCustomPanel(t); }); });
+}
+
+// ─── MARKDOWN ────────────────────────────────────────────────
+function _parseMarkdown(text) {
+  if (!text || !text.trim()) return '';
+  try {
+    var renderer = new marked.Renderer();
+    var origLink = renderer.link.bind(renderer);
+    renderer.link = function(href, title, text) {
+      if (href && href.startsWith('@tab:')) {
+        var tabId = href.replace('@tab:', '');
+        return '<a href="#" class="tab-link" onclick="switchTab(\'' + tabId + '\');return false;">' + text + '</a>';
+      }
+      return '<a href="' + (href||'') + '"' + (title ? ' title="' + title + '"' : '') + ' target="_blank" rel="noopener">' + text + '</a>';
+    };
+    return marked.parse(text, { renderer: renderer, breaks: true });
+  } catch(e) { return '<pre>' + text + '</pre>'; }
+}
+
 var _savedRange = null;
 function openTabLinkModal() {
   var sel = window.getSelection();
@@ -3406,12 +3530,12 @@ function insertTabLink() {
   var text = document.getElementById('tab-link-text').value.trim();
   var targetId = document.getElementById('tab-link-target').value;
   if (!text) { showToast('TEXTE DU LIEN REQUIS'); return; }
-  var linkHtml = '<a href="#" class="tab-link" onclick="switchTab(\'' + targetId + '\');return false;">' + _escH(text) + '</a>';
+  var linkMd = '[' + text + '](@tab:' + targetId + ')';
   if (_savedRange) {
     var sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(_savedRange);
-    document.execCommand('insertHTML', false, linkHtml);
+    document.execCommand('insertText', false, linkMd);
   }
   closeTabLinkModal();
   scheduleSave();
