@@ -1350,7 +1350,7 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
       <button id="export-btn" onclick="exportData()">⬇ EXPORT</button>
       <button id="import-btn" onclick="document.getElementById('import-input').click()">⬆ IMPORT</button>
       <button id="reset-btn" onclick="resetData()">↺ RESET</button>
-      <button id="save-file-btn" onclick="saveToFile()" title="Télécharge un index.html avec tes modifications">💾 SAUVEGARDER</button>
+      <button id="save-file-btn" onclick="saveToFile()" title="Publie les modifications sur Firebase — visible par tous au rechargement">☁ PUBLIER</button>
       <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(event)">
     </div>
   </header>
@@ -1986,11 +1986,27 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
   </div>
 </div>
 
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
 <script>
 
 // ═══════════════════════════════════════════════════════════════
 //  BROKEN SUNSHINE — Dev Dashboard v2 · JavaScript
 // ═══════════════════════════════════════════════════════════════
+
+// ─── FIREBASE ────────────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyBL10tM74YuxDWMb04rOWVy9ez53FTiA3s",
+  authDomain: "broken-sunshine.firebaseapp.com",
+  projectId: "broken-sunshine",
+  storageBucket: "broken-sunshine.firebasestorage.app",
+  messagingSenderId: "995171659803",
+  appId: "1:995171659803:web:0f5b33465c2ab03802c8be"
+});
+const db = firebase.firestore();
+const CLOUD_DOC = db.collection('dashboard').doc('main');
 
 const STORAGE_KEY = 'bs-dashboard-v2';
 let editMode = false;
@@ -2068,20 +2084,23 @@ function saveAll() {
   updateLastUpdated();
 }
 
-function loadData() {
-  // BAKED_DATA = données intégrées dans le fichier via "💾 Sauvegarder"
-  // getSaved() = données dans le localStorage (modifications en cours)
-  const data = window.BAKED_DATA || getSaved();
+async function loadData() {
+  let data = null;
+  try {
+    const snap = await CLOUD_DOC.get();
+    if (snap.exists) {
+      data = JSON.parse(snap.data().content);
+    }
+  } catch(e) {
+    console.warn('Firebase indisponible, chargement depuis localStorage', e);
+  }
+  if (!data) data = getSaved();
   if (!data || Object.keys(data).length === 0) { updateProgressDisplay(15); return; }
 
-  // Si BAKED_DATA existe, le contenu des sections est déjà dans le HTML (outerHTML sauvegardé)
-  // On restaure uniquement le contenu dynamique qui ne peut pas être capturé dans le HTML statique
-  if (!window.BAKED_DATA) {
-    document.querySelectorAll('[data-section-id]').forEach(section => {
-      const id = section.dataset.sectionId;
-      if (data[id]) { section.innerHTML = data[id]; reattachEvents(section); }
-    });
-  }
+  document.querySelectorAll('[data-section-id]').forEach(section => {
+    const id = section.dataset.sectionId;
+    if (data[id]) { section.innerHTML = data[id]; reattachEvents(section); }
+  });
 
   updateProgressDisplay(data.progress || 15);
   if (data.lastUpdated) document.getElementById('last-updated-display').textContent = data.lastUpdated;
@@ -2089,19 +2108,11 @@ function loadData() {
   if (data.checkedScenes)   restoreCheckedScenes(data.checkedScenes);
   if (data.checkboxes)      restoreCheckboxStates(data.checkboxes);
 
-  if (!window.BAKED_DATA && data.customSections) {
+  if (data.customSections) {
     data.customSections.forEach(cs => renderCustomSection(cs));
   }
   // Groupes sidebar personnalisés (le rendu est fait dans grantAccess → initSidebarGroups)
   if (data.sidebarGroups) _sidebarGroups = data.sidebarGroups;
-
-  // Si chargé depuis BAKED_DATA : réattacher les événements (onclick inline perdus après outerHTML)
-  if (window.BAKED_DATA) {
-    document.querySelectorAll('[data-section-id]').forEach(s => reattachEvents(s));
-    document.querySelectorAll('#custom-sections-container [id^="wrap-"]').forEach(wrap => {
-      reattachCustomEvents(wrap.id.replace('wrap-',''));
-    });
-  }
 }
 
 function reattachEvents(section) {
@@ -2153,53 +2164,24 @@ function resetData() {
   location.reload();
 }
 
-function saveToFile() {
-  // Sauvegarde d'abord dans localStorage pour être sûr que tout est à jour
+async function saveToFile() {
   saveAll();
-
-  // Données dynamiques à embarquer (statuts, coches — choses non capturées dans le HTML brut)
-  const bakedData = {
-    progress:        parseInt(document.getElementById('progress-display').textContent) || 15,
-    lastUpdated:     new Date().toISOString().split('T')[0],
-    trackerStatuses: serializeTrackerStatuses(),
-    checkedScenes:   serializeCheckedScenes(),
-    checkboxes:      serializeCheckboxStates(),
-  };
-
-  // Clone propre du document entier (outerHTML capture tout le DOM actuel)
-  const clone = document.documentElement.cloneNode(true);
-
-  // Nettoyer le clone
-  clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
-  clone.querySelector('body')?.classList.remove('edit-mode');
-
-  // Mettre à jour la barre de progression dans le clone
-  const bar = clone.querySelector('#progress-bar');
-  const pct = bakedData.progress;
-  if (bar) bar.style.width = pct + '%';
-  const disp = clone.querySelector('#progress-display');
-  if (disp) disp.textContent = pct + '%';
-  const lu = clone.querySelector('#last-updated-display');
-  if (lu) lu.textContent = bakedData.lastUpdated;
-
-  // Supprimer l'ancien script BAKED_DATA s'il existe déjà
-  clone.querySelector('script[data-baked]')?.remove();
-
-  // Injecter le nouveau BAKED_DATA en tout premier dans <head>
-  const script = document.createElement('script');
-  script.setAttribute('data-baked', '1');
-  script.textContent = 'window.BAKED_DATA=' + JSON.stringify(bakedData) + ';';
-  clone.querySelector('head').insertBefore(script, clone.querySelector('head').firstChild);
-
-  // Générer et télécharger le fichier
-  const html = '<!DOCTYPE html>\n' + clone.outerHTML;
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), { href: url, download: 'index.html' });
-  a.click();
-  URL.revokeObjectURL(url);
-
-  showToast('💾 FICHIER TÉLÉCHARGÉ ✓');
+  const btn = document.getElementById('save-file-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ PUBLICATION...';
+  try {
+    await CLOUD_DOC.set({
+      content: JSON.stringify(getSaved()),
+      updatedAt: new Date().toISOString()
+    });
+    showToast('☁ PUBLIÉ ✓ — Visible par tous au rechargement');
+  } catch(e) {
+    console.error(e);
+    showToast('❌ ERREUR FIREBASE — Vérifier la console');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '☁ PUBLIER';
+  }
 }
 
 // ─── TOAST ───────────────────────────────────────────────────
@@ -2704,13 +2686,13 @@ async function loginSubmit() {
   grantAccess(username);
 }
 
-function grantAccess(username) {
+async function grantAccess(username) {
   document.body.classList.add('logged-in');
   // Afficher le nom dans la nav
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) logoutBtn.title = `Connecté : ${username} — Cliquer pour quitter`;
   // Charger les données du dashboard
-  loadData();
+  await loadData();
   // Toujours s'assurer que les groupes sont rendus (même si loadData a fait un return précoce)
   initSidebarGroups();
   // Activer l'onglet actif
