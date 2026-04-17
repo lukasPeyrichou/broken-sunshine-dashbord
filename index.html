@@ -2324,10 +2324,10 @@ function importData(event) {
           // Support sous-dossiers dans le JSON d'import
           (grpDef.folders || []).forEach(function(fDef) {
             var fTabs = (fDef.tabs || []).map(function(t) { return { id: 'ctab-' + Date.now() + '-' + Math.random().toString(36).slice(2,7), name: t.name || 'Onglet', icon: t.icon || '', content: t.content || '' }; });
-            items.push({ type: 'folder', id: 'f' + Date.now() + '-' + Math.random().toString(36).slice(2,5), name: fDef.name || 'Dossier', icon: fDef.icon || '📂', collapsed: false, tabs: fTabs });
+            items.push({ type: 'folder', id: 'f' + Date.now() + '-' + Math.random().toString(36).slice(2,5), name: fDef.name || 'Dossier', icon: fDef.icon || '📂', collapsed: true, tabs: fTabs });
             fTabs.forEach(function(tab) { ensureCustomPanel(tab); });
           });
-          _sidebarGroups.push({ id: grpId, name: grpDef.name || 'Nouveau groupe', icon: grpDef.icon || '', collapsed: false, items: items });
+          _sidebarGroups.push({ id: grpId, name: grpDef.name || 'Nouveau groupe', icon: grpDef.icon || '', collapsed: true, items: items });
           tabs.forEach(function(tab) { ensureCustomPanel(tab); });
         });
         renderSidebarGroups();
@@ -3135,6 +3135,17 @@ function _findFolder(grp, foldId) {
 
 /* ── initialisation au login ── */
 function initSidebarGroups() {
+  // Migration one-shot : replier tous les groupes et dossiers par défaut
+  if (!getSaved()._collapsedByDefault) {
+    _sidebarGroups.forEach(function(grp) {
+      grp.collapsed = true;
+      (grp.items || []).forEach(function(item) {
+        if (item.type === 'folder') item.collapsed = true;
+      });
+    });
+    var _md = getSaved(); _md._collapsedByDefault = true;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(_md));
+  }
   // Auto-seed groupe Histoire si absent
   if (!_sidebarGroups.some(function(g) { return g.id === 'grp-histoire-ch1'; })) {
     var grp = JSON.parse(JSON.stringify(_DEFAULT_HISTOIRE_GROUP));
@@ -3175,7 +3186,7 @@ function renderSidebarGroups() {
 function buildGroupEl(grp) {
   _migrateGroup(grp);
   var wrap = document.createElement('div');
-  wrap.className = 'sidebar-group' + (grp.collapsed ? ' collapsed' : '');
+  wrap.className = 'sidebar-group' + (grp.collapsed !== false ? ' collapsed' : '');
   wrap.id = 'sgrp-' + grp.id;
 
   var hdr = document.createElement('button');
@@ -3218,7 +3229,7 @@ function buildGroupEl(grp) {
 
 function buildSubFolderEl(grpId, folder) {
   var wrap = document.createElement('div');
-  wrap.className = 'sidebar-subfolder' + (folder.collapsed ? ' collapsed' : '');
+  wrap.className = 'sidebar-subfolder' + (folder.collapsed !== false ? ' collapsed' : '');
   wrap.id = 'sfold-' + folder.id;
 
   var hdr = document.createElement('button');
@@ -3327,7 +3338,7 @@ function addSidebarGroup() {
   var name = prompt('Nom du groupe :', 'Nouveau groupe');
   if (!name || !name.trim()) return;
   var icon = prompt('Icône (emoji — optionnel) :', '📁');
-  var grp = { id: 'g' + Date.now(), name: name.trim(), icon: (icon || '').trim(), collapsed: false, items: [] };
+  var grp = { id: 'g' + Date.now(), name: name.trim(), icon: (icon || '').trim(), collapsed: true, items: [] };
   _sidebarGroups.push(grp);
   saveAll();
   renderSidebarGroups();
@@ -3363,7 +3374,7 @@ function addSubFolder(grpId) {
   var name = prompt('Nom du sous-dossier :', 'Nouveau dossier');
   if (!name || !name.trim()) return;
   var icon = prompt('Icône (emoji — optionnel) :', '📂');
-  var folder = { type: 'folder', id: 'f' + Date.now(), name: name.trim(), icon: (icon || '').trim(), collapsed: false, tabs: [] };
+  var folder = { type: 'folder', id: 'f' + Date.now(), name: name.trim(), icon: (icon || '').trim(), collapsed: true, tabs: [] };
   grp.items.push(folder);
   saveAll(); renderSidebarGroups();
 }
