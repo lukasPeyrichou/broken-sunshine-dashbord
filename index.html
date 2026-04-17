@@ -3135,17 +3135,6 @@ function _findFolder(grp, foldId) {
 
 /* ── initialisation au login ── */
 function initSidebarGroups() {
-  // Migration one-shot : replier tous les groupes et dossiers par défaut
-  if (!getSaved()._collapsedByDefault) {
-    _sidebarGroups.forEach(function(grp) {
-      grp.collapsed = true;
-      (grp.items || []).forEach(function(item) {
-        if (item.type === 'folder') item.collapsed = true;
-      });
-    });
-    var _md = getSaved(); _md._collapsedByDefault = true;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(_md));
-  }
   // Auto-seed groupe Histoire si absent
   if (!_sidebarGroups.some(function(g) { return g.id === 'grp-histoire-ch1'; })) {
     var grp = JSON.parse(JSON.stringify(_DEFAULT_HISTOIRE_GROUP));
@@ -3169,6 +3158,13 @@ function initSidebarGroups() {
     _getAllTabs(grpS).forEach(function(tab) { ensureCustomPanel(tab); });
     saveAll();
   }
+  // Toujours replier tous les groupes et dossiers au chargement
+  _sidebarGroups.forEach(function(grp) {
+    grp.collapsed = true;
+    (grp.items || []).forEach(function(item) {
+      if (item.type === 'folder') item.collapsed = true;
+    });
+  });
   renderSidebarGroups();
   _sidebarGroups.forEach(function(grp) {
     _getAllTabs(grp).forEach(function(tab) { ensureCustomPanel(tab); });
@@ -3186,7 +3182,7 @@ function renderSidebarGroups() {
 function buildGroupEl(grp) {
   _migrateGroup(grp);
   var wrap = document.createElement('div');
-  wrap.className = 'sidebar-group' + (grp.collapsed !== false ? ' collapsed' : '');
+  wrap.className = 'sidebar-group' + (grp.collapsed ? ' collapsed' : '');
   wrap.id = 'sgrp-' + grp.id;
 
   var hdr = document.createElement('button');
@@ -3229,7 +3225,7 @@ function buildGroupEl(grp) {
 
 function buildSubFolderEl(grpId, folder) {
   var wrap = document.createElement('div');
-  wrap.className = 'sidebar-subfolder' + (folder.collapsed !== false ? ' collapsed' : '');
+  wrap.className = 'sidebar-subfolder' + (folder.collapsed ? ' collapsed' : '');
   wrap.id = 'sfold-' + folder.id;
 
   var hdr = document.createElement('button');
