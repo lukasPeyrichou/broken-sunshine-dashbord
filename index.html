@@ -1339,6 +1339,11 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
 .ctab-content-area pre { background: rgba(0,0,0,.4); padding: 14px; border-radius: var(--radius); margin: 0 0 .8em; overflow-x: auto; }
 .ctab-content-area pre code { background: none; padding: 0; color: var(--cream2); }
 .ctab-content-area blockquote { border-left: 3px solid var(--gold-dim); padding-left: 14px; color: var(--cream3); font-style: italic; margin: 0 0 .8em; }
+.ctab-content-area .note-unity { background: rgba(62,130,162,.08); border: 1px solid rgba(62,130,162,.28); border-left: 3px solid var(--steel); border-radius: var(--radius); padding: 10px 14px 10px 14px; margin: 0 0 1em; font-style: normal; color: var(--cream2); }
+.ctab-content-area .note-unity .note-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--steel2); background: rgba(62,130,162,.15); border: 1px solid rgba(62,130,162,.3); border-radius: 3px; padding: 2px 7px; margin-bottom: 8px; font-weight: 700; }
+.ctab-content-area .note-scene { background: rgba(180,100,30,.07); border: 1px solid rgba(180,100,30,.22); border-left: 3px solid var(--amber); border-radius: var(--radius); padding: 10px 14px 10px 14px; margin: 0 0 1em; font-style: normal; color: var(--cream2); }
+.ctab-content-area .note-scene .note-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; color: var(--amber2); background: rgba(180,100,30,.13); border: 1px solid rgba(180,100,30,.28); border-radius: 3px; padding: 2px 7px; margin-bottom: 8px; font-weight: 700; }
+.ctab-content-area .note-unity p, .ctab-content-area .note-scene p { margin: 0; }
 .ctab-content-area strong { color: var(--cream); font-weight: 700; }
 .ctab-content-area em { color: var(--cream2); font-style: italic; }
 .ctab-content-area hr { border: none; border-top: 1px solid rgba(200,135,42,.2); margin: 1.2em 0; }
@@ -3532,6 +3537,18 @@ function _parseMarkdown(text) {
         return '<a href="#" class="tab-link" onclick="switchTab(\'' + tabId + '\');return false;">' + text + '</a>';
       }
       return '<a href="' + (href||'') + '"' + (title ? ' title="' + title + '"' : '') + ' target="_blank" rel="noopener">' + text + '</a>';
+    };
+    renderer.blockquote = function(quote) {
+      var plain = quote.replace(/<[^>]+>/g, '');
+      if (/^\s*NOTE UNITY\b/i.test(plain)) {
+        var body = quote.replace(/<strong>NOTE UNITY\s*[—\-–]?\s*<\/strong>/i, '').replace(/^\s*<p>\s*/, '<p>').trim();
+        return '<div class="note-unity"><span class="note-badge">⚙ UNITY</span>' + body + '</div>';
+      }
+      if (/^\s*NOTE DE MISE EN SC[EÈ]NE\b/i.test(plain)) {
+        var body = quote.replace(/<strong>NOTE DE MISE EN SC[EÈ]NE\s*[—\-–]?\s*<\/strong>/i, '').replace(/^\s*<p>\s*/, '<p>').trim();
+        return '<div class="note-scene"><span class="note-badge">🎬 MISE EN SCÈNE</span>' + body + '</div>';
+      }
+      return '<blockquote>' + quote + '</blockquote>';
     };
     return marked.parse(text, { renderer: renderer, breaks: true });
   } catch(e) { return '<pre>' + text + '</pre>'; }
