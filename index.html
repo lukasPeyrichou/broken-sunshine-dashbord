@@ -3253,7 +3253,7 @@ function initSidebarGroups() {
       var _ch2Folder = JSON.parse(JSON.stringify(_DEFAULT_CH2_FOLDER));
       if (!_histGrp.items) _histGrp.items = [];
       _histGrp.items.push(_ch2Folder);
-      _getAllTabs(_ch2Folder).forEach(function(tab) { ensureCustomPanel(tab); });
+      (_ch2Folder.tabs || []).forEach(function(tab) { ensureCustomPanel(tab); });
       saveAll();
     }
   }
