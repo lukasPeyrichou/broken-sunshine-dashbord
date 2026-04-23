@@ -2922,6 +2922,26 @@ async function loginSubmit() {
   grantAccess(username);
 }
 
+function migrateHistoireTabs() {
+  var TABS_TO_MIGRATE = ['ctab-ch1-acte3', 'ctab-ch1-acte4'];
+  function findInDefault(tabId) {
+    var result = null;
+    function walk(grp) {
+      _getAllTabs(grp).forEach(function(t) { if (t.id === tabId) result = t; });
+    }
+    try { walk(_DEFAULT_HISTOIRE_GROUP); } catch(e) {}
+    return result;
+  }
+  _sidebarGroups.forEach(function(grp) {
+    _getAllTabs(grp).forEach(function(tab) {
+      if (TABS_TO_MIGRATE.indexOf(tab.id) !== -1 && tab.content && !tab.content.includes('scene-type-badge')) {
+        var def = findInDefault(tab.id);
+        if (def) { tab.content = def.content; }
+      }
+    });
+  });
+}
+
 async function grantAccess(username) {
   document.body.classList.add('logged-in');
   // Afficher le nom dans la nav
@@ -2929,6 +2949,7 @@ async function grantAccess(username) {
   if (logoutBtn) logoutBtn.title = `Connecté : ${username} — Cliquer pour quitter`;
   // Charger les données du dashboard
   await loadData();
+  migrateHistoireTabs();
   // Toujours s'assurer que les groupes sont rendus (même si loadData a fait un return précoce)
   initSidebarGroups();
   // Activer l'onglet actif
