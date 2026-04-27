@@ -1369,8 +1369,8 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
     <div class="login-title">SUNSHINE</div>
     <div class="login-subtitle">Dev Dashboard · Accès restreint</div>
     <div class="login-field">
-      <label class="login-label" for="login-user">IDENTIFIANT</label>
-      <input class="login-input" id="login-user" type="text" autocomplete="username" placeholder="ton identifiant..." onkeydown="if(event.key==='Enter')loginSubmit()">
+      <label class="login-label" for="login-user">EMAIL</label>
+      <input class="login-input" id="login-user" type="email" autocomplete="email" placeholder="ton email..." onkeydown="if(event.key==='Enter')loginSubmit()">
     </div>
     <div class="login-field">
       <label class="login-label" for="login-pass">MOT DE PASSE</label>
@@ -1387,18 +1387,8 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
   <div class="modal-box">
     <div class="modal-title">⚙ GESTION DES ACCÈS</div>
     <div id="access-user-list"></div>
-    <div class="access-sep"></div>
-    <div class="modal-field">
-      <label class="modal-label">NOUVEL IDENTIFIANT</label>
-      <input class="modal-input" id="new-user-name" type="text" placeholder="prénom ou pseudo...">
-    </div>
-    <div class="modal-field">
-      <label class="modal-label">MOT DE PASSE</label>
-      <input class="modal-input" id="new-user-pass" type="password" placeholder="••••••••">
-    </div>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeAccessModal()">FERMER</button>
-      <button class="btn-confirm" onclick="addUser()">AJOUTER</button>
     </div>
   </div>
 </div>
@@ -2199,6 +2189,7 @@ body.edit-mode .ctab-content-area:focus { outline-color: var(--gold); }
 <!-- Firebase SDK -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.6/marked.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
 <script>
@@ -2217,6 +2208,7 @@ firebase.initializeApp({
   appId: "1:995171659803:web:0f5b33465c2ab03802c8be"
 });
 const db = firebase.firestore();
+const auth = firebase.auth();
 const CLOUD_DOC = db.collection('dashboard').doc('main');
 
 const STORAGE_KEY = 'bs-dashboard-v2';
@@ -2857,80 +2849,52 @@ function renameCustomSection(id) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  AUTHENTIFICATION
+//  AUTHENTIFICATION — Firebase Auth
 // ═══════════════════════════════════════════════════════════════
 
-const USERS_KEY   = 'bs-users-v2';
-const SESSION_KEY = 'bs-session-v2';
-const SALT        = 'bs-aethoria-2026';
-
-// ─── HASH ────────────────────────────────────────────────────
-async function hashPassword(password) {
-  const data = new TextEncoder().encode(password + SALT);
-  const buf  = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-}
-
-// ─── USERS STORAGE ───────────────────────────────────────────
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
-  catch(e) { return {}; }
-}
-function saveUsers(u) { localStorage.setItem(USERS_KEY, JSON.stringify(u)); }
-
 // ─── SESSION CHECK ───────────────────────────────────────────
-async function checkSession() {
-  // Créer l'admin par défaut si aucun utilisateur n'existe
-  const users = getUsers();
-  if (Object.keys(users).length === 0) {
-    users['admin'] = await hashPassword('sunshine');
-    saveUsers(users);
-  }
-  // Vérifier session active
-  const stored = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY + '-remember');
-  if (stored && getUsers()[stored]) {
-    grantAccess(stored);
-  }
-  // Sinon l'écran de login reste visible
+function checkSession() {
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      await grantAccess(user.email);
+    }
+    // Sinon l'écran de login reste visible
+  });
 }
 
 // ─── LOGIN ───────────────────────────────────────────────────
 async function loginSubmit() {
-  const username = document.getElementById('login-user').value.trim().toLowerCase();
+  const email    = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
   const remember = document.getElementById('login-remember').checked;
   const errorEl  = document.getElementById('login-error');
   errorEl.textContent = '';
 
-  if (!username || !password) {
-    errorEl.textContent = 'Identifiant et mot de passe requis.';
+  if (!email || !password) {
+    errorEl.textContent = 'Email et mot de passe requis.';
     return;
   }
 
-  // Animation de chargement sur le bouton
   const btn = document.querySelector('.login-btn');
   btn.textContent = 'VÉRIFICATION...';
   btn.disabled = true;
 
-  const users = getUsers();
-  const hash  = await hashPassword(password);
-
-  if (!users[username] || users[username] !== hash) {
-    errorEl.textContent = 'Identifiant ou mot de passe incorrect.';
+  try {
+    const persistence = remember
+      ? firebase.auth.Auth.Persistence.LOCAL
+      : firebase.auth.Auth.Persistence.SESSION;
+    await auth.setPersistence(persistence);
+    await auth.signInWithEmailAndPassword(email, password);
+    // onAuthStateChanged déclenche grantAccess
+  } catch (e) {
+    errorEl.textContent = 'Email ou mot de passe incorrect.';
     btn.textContent = 'CONNEXION ▶';
     btn.disabled = false;
-    // Shake animation
     const box = document.querySelector('.login-box');
     box.style.animation = 'none';
-    box.offsetHeight; // reflow
+    box.offsetHeight;
     box.style.animation = 'loginShake .4s ease';
-    return;
   }
-
-  if (remember) localStorage.setItem(SESSION_KEY + '-remember', username);
-  else          sessionStorage.setItem(SESSION_KEY, username);
-
-  grantAccess(username);
 }
 
 function migrateHistoireTabs() {
@@ -2953,31 +2917,27 @@ function migrateHistoireTabs() {
   });
 }
 
-async function grantAccess(username) {
+async function grantAccess(email) {
   document.body.classList.add('logged-in');
-  // Afficher le nom dans la nav
   const logoutBtn = document.getElementById('logout-btn');
-  if (logoutBtn) logoutBtn.title = `Connecté : ${username} — Cliquer pour quitter`;
-  // Charger les données du dashboard
+  if (logoutBtn) logoutBtn.title = `Connecté : ${email} — Cliquer pour quitter`;
   await loadData();
   migrateHistoireTabs();
-  // Toujours s'assurer que les groupes sont rendus (même si loadData a fait un return précoce)
   initSidebarGroups();
-  // Activer l'onglet actif
   switchTab(sessionStorage.getItem('bs-active-tab') || 'overview');
 }
 
 // ─── LOGOUT ──────────────────────────────────────────────────
 function logoutUser() {
   if (!confirm('Se déconnecter ?')) return;
-  sessionStorage.removeItem(SESSION_KEY);
-  localStorage.removeItem(SESSION_KEY + '-remember');
-  document.body.classList.remove('logged-in');
-  document.getElementById('login-user').value = '';
-  document.getElementById('login-pass').value = '';
-  document.getElementById('login-error').textContent = '';
-  document.querySelector('.login-btn').textContent = 'CONNEXION ▶';
-  document.querySelector('.login-btn').disabled = false;
+  auth.signOut().then(() => {
+    document.body.classList.remove('logged-in');
+    document.getElementById('login-user').value = '';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-error').textContent = '';
+    document.querySelector('.login-btn').textContent = 'CONNEXION ▶';
+    document.querySelector('.login-btn').disabled = false;
+  });
 }
 
 // ─── GESTION DES ACCÈS ───────────────────────────────────────
@@ -2987,50 +2947,20 @@ function openAccessModal() {
 }
 function closeAccessModal() {
   document.getElementById('access-modal').classList.remove('open');
-  document.getElementById('new-user-name').value = '';
-  document.getElementById('new-user-pass').value = '';
 }
 
 function renderUserList() {
-  const list  = document.getElementById('access-user-list');
-  const users = getUsers();
-  const currentUser = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY + '-remember') || '';
-
-  list.innerHTML = Object.keys(users).map(u => `
+  const list = document.getElementById('access-user-list');
+  const user = auth.currentUser;
+  list.innerHTML = user ? `
     <div class="access-user-row">
-      <span class="access-username">${u}</span>
-      ${u === currentUser ? '<span class="access-badge">VOUS</span>' : ''}
-      ${u === currentUser
-        ? `<button class="access-del-btn" onclick="openChpassModal()" style="border-color:var(--gold);color:var(--gold)">🔑 MDP</button>`
-        : `<button class="access-del-btn" onclick="removeUser('${u}')">✕ Supprimer</button>`
-      }
-    </div>`).join('');
-}
-
-async function addUser() {
-  const name = document.getElementById('new-user-name').value.trim().toLowerCase();
-  const pass = document.getElementById('new-user-pass').value;
-  if (!name || !pass) { showToast('Remplis les deux champs'); return; }
-
-  const users = getUsers();
-  if (users[name]) { showToast('Cet identifiant existe déjà'); return; }
-
-  users[name] = await hashPassword(pass);
-  saveUsers(users);
-  document.getElementById('new-user-name').value = '';
-  document.getElementById('new-user-pass').value = '';
-  renderUserList();
-  showToast('Utilisateur ajouté ✓');
-}
-
-function removeUser(username) {
-  const users = getUsers();
-  if (Object.keys(users).length <= 1) { showToast('Impossible — dernier utilisateur'); return; }
-  if (!confirm(`Supprimer l'accès de "${username}" ?`)) return;
-  delete users[username];
-  saveUsers(users);
-  renderUserList();
-  showToast('Accès supprimé');
+      <span class="access-username">${user.email}</span>
+      <span class="access-badge">VOUS</span>
+      <button class="access-del-btn" onclick="openChpassModal()" style="border-color:var(--gold);color:var(--gold)">🔑 MDP</button>
+    </div>
+    <div style="margin-top:12px;font-size:13px;color:var(--dim);border-top:1px solid var(--dim2);padding-top:12px">
+      Pour ajouter ou supprimer des utilisateurs → console Firebase → Authentication.
+    </div>` : '';
 }
 
 // ─── CHANGER MOT DE PASSE ────────────────────────────────────
@@ -3053,18 +2983,22 @@ async function changePassword() {
 
   if (!oldPass || !newPass || !confirm2) { errEl.textContent = 'Tous les champs sont requis.'; return; }
   if (newPass !== confirm2) { errEl.textContent = 'Les mots de passe ne correspondent pas.'; return; }
-  if (newPass.length < 4)   { errEl.textContent = 'Minimum 4 caractères.'; return; }
+  if (newPass.length < 6)   { errEl.textContent = 'Minimum 6 caractères.'; return; }
 
-  const username = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY + '-remember');
-  const users    = getUsers();
-  const oldHash  = await hashPassword(oldPass);
+  const user = auth.currentUser;
+  if (!user) return;
 
-  if (users[username] !== oldHash) { errEl.textContent = 'Mot de passe actuel incorrect.'; return; }
-
-  users[username] = await hashPassword(newPass);
-  saveUsers(users);
-  closeChpassModal();
-  showToast('Mot de passe modifié ✓');
+  try {
+    const credential = firebase.auth.EmailAuthProvider.credential(user.email, oldPass);
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPass);
+    closeChpassModal();
+    showToast('Mot de passe modifié ✓');
+  } catch (e) {
+    errEl.textContent = e.code === 'auth/wrong-password'
+      ? 'Mot de passe actuel incorrect.'
+      : 'Erreur — réessaie.';
+  }
 }
 
 // ─── ANIMATION SHAKE ─────────────────────────────────────────
